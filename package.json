@@ -5,6 +5,7 @@
   "license": "MIT",
   "scripts": {
     "test:proxy": "npx hardhat test ./test/ProxyInvest.spec.ts",
+    "test:comm": "npx hardhat test ./test/CommunityStore.spec.ts",
     "lint": "yarn lint:solidity",
     "lint:solidity": "solhint 'contracts/**/*.sol'"
   },
@@ -29,12 +30,13 @@
     "prettier-plugin-solidity": "^1.0.0",
     "solhint": "^3.3.7",
     "solhint-plugin-prettier": "^0.0.5",
-    "solidity-coverage": "^0.8.0",
+    "solidity-coverage": "^0.8.2",
     "ts-node": ">=8.0.0",
     "typechain": "^8.1.0",
     "typescript": ">=4.5.0"
   },
   "dependencies": {
+    "@balancer-labs/v2-standalone-utils": "^2.0.0",
     "@balancer-labs/v2-vault": "^2.0.0"
   }
 }
