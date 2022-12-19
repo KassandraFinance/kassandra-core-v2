@@ -32,7 +32,7 @@ contract ProxyInvest is Ownable {
         vault = _vault;
     }
 
-    function joinPoolExactTokensInWithSwap(
+    function joinPoolExactTokenInWithSwap(
         bytes32 poolId,
         IERC20 tokenIn,
         uint256 tokenAmountIn,
@@ -50,7 +50,7 @@ contract ProxyInvest is Ownable {
         (bool success, bytes memory response) = address(swapProvider).call{ value: msg.value }(data);
         require(success, string(response));
 
-        (IERC20[] memory tokens,,) = vault.getPoolTokens(poolId);
+        (IERC20[] memory tokens, , ) = vault.getPoolTokens(poolId);
 
         uint256 size = tokens.length;
         uint256[] memory maxAmountsIn = new uint256[](size);
@@ -98,5 +98,31 @@ contract ProxyInvest is Ownable {
         }
 
         vault.joinPool(poolId, address(this), msg.sender, request);
+    }
+
+    function exitPoolExactInForTokensOut(bytes32 poolId, IVault.ExitPoolRequest memory request) external payable {
+        (, uint tokenInAmount) = abi.decode(request.userData, (uint256, uint256));
+        (address pool, ) = vault.getPool(poolId);
+
+        console.log(tokenInAmount);
+
+        IERC20(pool).safeTransferFrom(msg.sender, address(this), tokenInAmount);
+        if (IERC20(pool).allowance(address(this), address(vault)) < tokenInAmount) {
+            IERC20(pool).safeApprove(address(vault), type(uint256).max);
+        }
+        
+        vault.exitPool(poolId, address(this), msg.sender, request);
+    }
+
+    function exitPoolExactInForTokenOut(bytes32 poolId, IVault.ExitPoolRequest memory request) external payable {
+        (, uint tokenInAmount, ) = abi.decode(request.userData, (uint256, uint256, uint256));
+        (address pool, ) = vault.getPool(poolId);
+
+        IERC20(pool).safeTransferFrom(msg.sender, address(this), tokenInAmount);
+        if (IERC20(pool).allowance(address(this), address(vault)) < tokenInAmount) {
+            IERC20(pool).safeApprove(address(vault), type(uint256).max);
+        }
+        
+        vault.exitPool(poolId, address(this), msg.sender, request);
     }
 }
