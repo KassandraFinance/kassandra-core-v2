@@ -232,7 +232,7 @@ describe('ProxyInvest', () => {
 
         await proxyInvest
           .connect(account)
-          .exitPoolExactInForTokenOut(
+          .exitPoolExactIn(
             POOL_ID, 
             request
           );
@@ -267,7 +267,7 @@ describe('ProxyInvest', () => {
 
         await proxyInvest
           .connect(account)
-          .exitPoolExactInForTokensOut(
+          .exitPoolExactIn(
             POOL_ID, 
             request
           );

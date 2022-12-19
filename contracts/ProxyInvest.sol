@@ -100,23 +100,11 @@ contract ProxyInvest is Ownable {
         vault.joinPool(poolId, address(this), msg.sender, request);
     }
 
-    function exitPoolExactInForTokensOut(bytes32 poolId, IVault.ExitPoolRequest memory request) external payable {
+    function exitPoolExactIn(bytes32 poolId, IVault.ExitPoolRequest memory request) external payable {
         (, uint tokenInAmount) = abi.decode(request.userData, (uint256, uint256));
         (address pool, ) = vault.getPool(poolId);
 
         console.log(tokenInAmount);
-
-        IERC20(pool).safeTransferFrom(msg.sender, address(this), tokenInAmount);
-        if (IERC20(pool).allowance(address(this), address(vault)) < tokenInAmount) {
-            IERC20(pool).safeApprove(address(vault), type(uint256).max);
-        }
-        
-        vault.exitPool(poolId, address(this), msg.sender, request);
-    }
-
-    function exitPoolExactInForTokenOut(bytes32 poolId, IVault.ExitPoolRequest memory request) external payable {
-        (, uint tokenInAmount, ) = abi.decode(request.userData, (uint256, uint256, uint256));
-        (address pool, ) = vault.getPool(poolId);
 
         IERC20(pool).safeTransferFrom(msg.sender, address(this), tokenInAmount);
         if (IERC20(pool).allowance(address(this), address(vault)) < tokenInAmount) {
