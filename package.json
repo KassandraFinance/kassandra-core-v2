@@ -36,7 +36,9 @@
     "typescript": ">=4.5.0"
   },
   "dependencies": {
-    "@balancer-labs/v2-standalone-utils": "^2.0.0",
-    "@balancer-labs/v2-vault": "^2.0.0"
+    "@balancer-labs/v2-interfaces": "^0.2.1",
+    "@balancer-labs/v2-pool-utils": "^3.0.1",
+    "@balancer-labs/v2-solidity-utils": "^3.0.1",
+    "@balancer-labs/v2-standalone-utils": "^2.0.0"
   }
 }
