@@ -13,6 +13,10 @@ contract AuthorizedManagers is IAuthorizedManagers, Ownable {
         _factory = factory;
     }
 
+    function setFactory(address factory) external onlyOwner {
+        _factory = factory;
+    }
+
     function getAllowedPoolsToCreate(address manager) external view returns (uint8) {
         return _manager[manager];
     }
