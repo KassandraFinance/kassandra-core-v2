@@ -9,8 +9,6 @@ import "./managed/ManagedPool.sol";
 import "./BasePoolController.sol";
 import "./interfaces/IPrivateInvestors.sol";
 
-import "hardhat/console.sol";
-
 contract PrivateInvestors is IPrivateInvestors, Ownable {
     // pool address -> investor -> bool
     mapping(address => mapping(address => bool)) private _allowedInvestors;
@@ -23,7 +21,6 @@ contract PrivateInvestors is IPrivateInvestors, Ownable {
 
     function setController(address controller) external {
         require(_factories[msg.sender], "ERR_NOT_AUTHORIZED");
-        console.log("set controller true ", controller);
         _controllers[controller] = true;
     }
 
@@ -32,16 +29,14 @@ contract PrivateInvestors is IPrivateInvestors, Ownable {
     }
 
     function addPrivateInvestor(address investor) external override {
-        console.log(msg.sender, _controllers[msg.sender]);
         require(_controllers[msg.sender], "ERR_NOT_AUTHORIZED");
 
         address pool = BasePoolController(msg.sender).pool();
         address owner = ManagedPool(pool).getOwner();
 
-        console.log("owner", owner, msg.sender);
         require(owner == msg.sender, "ERR_INVALID_OWNER");
         require(_allowedInvestors[pool][investor] != true, "ADDRESS_ALREADY_ALLOWLISTED");
-        console.log("pool", pool);
+
         _allowedInvestors[pool][investor] = true;
 
         emit PrivateInvestorAdded(ManagedPool(pool).getPoolId(), pool, investor);
