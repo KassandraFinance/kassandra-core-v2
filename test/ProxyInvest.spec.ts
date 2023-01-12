@@ -1,8 +1,7 @@
 import { ethers, network } from 'hardhat';
-import { loadFixture, time } from '@nomicfoundation/hardhat-network-helpers';
 import { expect } from 'chai';
 import { defaultAbiCoder } from '@ethersproject/abi';
-import { BalancerHelpers, IVault, ProxyInvest, TokenMock } from '../typechain-types';
+import { BalancerHelperMock, IVault, ProxyInvest, TokenMock } from '../typechain-types';
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 
 describe('ProxyInvest', () => {
@@ -13,13 +12,13 @@ describe('ProxyInvest', () => {
   const THX_ADDRESS = '0x2934b36ca9a4b31e633c5be670c8c8b28b6aa015';
   const stMATIC_ADDRESS = '0x3a58a54c066fdc0f2d55fc9c89f0415c92ebf3c4';
   const SWAP_PROVIDER_ADDRESS_V5 = '0x1111111254eeb25477b68fb85ed929f73a960582';
-  const DAI_ADDRESS = '0x8f3Cf7ad23Cd3CaDbD9735AFf958023239c6A063';
+  const TOKEN_IN_ADDRESS = '0x7ceB23fD6bC0adD59E62ac25578270cFf1b9f619';
 
   let proxyInvest: ProxyInvest;
   let owner: SignerWithAddress; 
   let account: SignerWithAddress; 
   let vault: IVault; 
-  let helperBalancer: BalancerHelpers;
+  let helperBalancer: BalancerHelperMock;
   let thx: TokenMock; 
   let matic: TokenMock; 
   let dai: TokenMock;
@@ -39,13 +38,13 @@ describe('ProxyInvest', () => {
     const signer = await ethers.getSigner(VAULT_ADDRESS);
 
     vault = await ethers.getContractAt('IVault', VAULT_ADDRESS);
-    helperBalancer = await ethers.getContractAt('BalancerHelpers', BALANCER_HELPER_ADDRESS);
+    helperBalancer = await ethers.getContractAt("BalancerHelperMock", BALANCER_HELPER_ADDRESS);
 
 
     const TokenMock = await ethers.getContractFactory('TokenMock', signer);
     thx = TokenMock.attach(THX_ADDRESS);
     matic = TokenMock.attach(stMATIC_ADDRESS);
-    dai = TokenMock.attach(DAI_ADDRESS);
+    dai = TokenMock.attach(TOKEN_IN_ADDRESS);
     pool = TokenMock.attach(POOL_ADDRESS);
 
     await matic.connect(signer).transfer(account.address, ethers.utils.parseEther('2'));
@@ -56,13 +55,11 @@ describe('ProxyInvest', () => {
     await thx.connect(account).approve(proxyInvest.address, ethers.constants.MaxUint256);
     await dai.connect(account).approve(proxyInvest.address, ethers.constants.MaxUint256);
     await pool.connect(account).approve(proxyInvest.address, ethers.constants.MaxInt256);
-
-    console.log("Proxy address ", proxyInvest.address);
   })
 
   describe('Deployment', () => {
     it('should set vault contract', async () => {
-      const vaultAddress = await proxyInvest.vault();
+      const vaultAddress = await proxyInvest.getVault();
 
       expect(vaultAddress).to.equal(VAULT_ADDRESS);
     });
@@ -135,19 +132,20 @@ describe('ProxyInvest', () => {
 
     describe('joinPoolWithSwap', () => {
       it('should join pool with one tokens using swap provider', async () => {
-        const data = ethers.utils.arrayify('0x12aa3caf0000000000000000000000000d15038f8a0362b4ce71d6c879d56bf9fc2884cf0000000000000000000000008f3cf7ad23cd3cadbd9735aff958023239c6a0630000000000000000000000002934b36ca9a4b31e633c5be670c8c8b28b6aa015000000000000000000000000538a485de855e9239570aea1def9adbcbb6af1f8000000000000000000000000dcf79230c7954af96f540f7cf7e430afc7b0b595000000000000000000000000000000000000000000000000000000e8d4a510000000000000000000000000000000000000000000000000000000184b058e86b6000000000000000000000000000000000000000000000000000000000000000400000000000000000000000000000000000000000000000000000000000001400000000000000000000000000000000000000000000000000000000000000160000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000f80000000000000000000000000000000000000000000000000000000000da00a007e5c0d20000000000000000000000000000000000000000000000000000b600005300206ae4071198000f4240538a485de855e9239570aea1def9adbcbb6af1f8000000000000000000000000000000000000000000000000000000002cbee7b98f3cf7ad23cd3cadbd9735aff958023239c6a06300a0fbb7cd0680aebaaa8cdedddb665089551878dddefe2c50660d0001000000000000000003cf7ceb23fd6bc0add59e62ac25578270cff1b9f6192934b36ca9a4b31e633c5be670c8c8b28b6aa0151111111254eeb25477b68fb85ed929f73a9605820000000000000000cfee7c08')
+        const data = ethers.utils.arrayify('0x12aa3caf0000000000000000000000000d15038f8a0362b4ce71d6c879d56bf9fc2884cf0000000000000000000000007ceb23fd6bc0add59e62ac25578270cff1b9f6190000000000000000000000002934b36ca9a4b31e633c5be670c8c8b28b6aa0150000000000000000000000000d15038f8a0362b4ce71d6c879d56bf9fc2884cf000000000000000000000000dcf79230c7954af96f540f7cf7e430afc7b0b595000000000000000000000000000000000000000000000000000000e8d4a510000000000000000000000000000000000000000000000000000096267c9024d6bd0000000000000000000000000000000000000000000000000000000000000004000000000000000000000000000000000000000000000000000000000000014000000000000000000000000000000000000000000000000000000000000001600000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000017500000000000000000000000000000000000000000000000000000000015700a007e5c0d20000000000000000000000000000000000000000000000000001330000d051207f5f7411c2c7ec60e2db946abbe7dc354254870b7ceb23fd6bc0add59e62ac25578270cff1b9f6190024d0fffbdb0000000000000000000000007ceb23fd6bc0add59e62ac25578270cff1b9f61900000000000000000000000000000000000000000000000000000000000000000000000000000000000000002791bca1f2de4661ed88a30c99a7a9449aa84174000000000000000000000000000000000000000000000000000000000000055dffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff02a00000000000000000000000000000000000000000000000000096267c9024d6bdee63c1e5813f7cd6c7093d5a783128c926200c1fccb1d36b762791bca1f2de4661ed88a30c99a7a9449aa841741111111254eeb25477b68fb85ed929f73a9605820000000000000000000000cfee7c08')
         const initialBalanceMATIC = await matic.balanceOf(account.address);
         const initialBalanceTHX = await thx.balanceOf(account.address);
         const initialBalanceDAI = await dai.balanceOf(account.address);
         const initialBalanceBPT = await pool.balanceOf(account.address);
         const sendAmountMATIC = 0;
         const sendAmountTHX = '26980297818689';
-        const sendAmountDAI = '1000000000000';
+        const sendAmountIn = '1000000000000';
         const amounts = [sendAmountTHX, sendAmountMATIC];
         const assets = [THX_ADDRESS, stMATIC_ADDRESS];
         const joinKind = 1;
         const minBPTOut = 0;
         const userData = defaultAbiCoder.encode(['uint256', 'uint256[]', 'uint256'], [joinKind, amounts, minBPTOut]);
+
         const [bptOutAmount] = await helperBalancer.callStatic.queryJoin(POOL_ID, proxyInvest.address, account.address, {
           assets,
           maxAmountsIn: amounts,
@@ -157,13 +155,13 @@ describe('ProxyInvest', () => {
 
         await proxyInvest
           .connect(account)
-          .joinPoolExactTokenInWithSwap(POOL_ID, DAI_ADDRESS, sendAmountDAI, THX_ADDRESS, bptOutAmount, data);
+          .joinPoolExactTokenInWithSwap(POOL_ID, TOKEN_IN_ADDRESS, sendAmountIn, THX_ADDRESS, bptOutAmount, data);
 
         expect(await thx.balanceOf(proxyInvest.address)).to.equal(ethers.BigNumber.from(0));
         expect(await pool.balanceOf(account.address)).to.be.greaterThanOrEqual(initialBalanceBPT.add(bptOutAmount));
         expect(await matic.balanceOf(account.address)).to.be.equal(initialBalanceMATIC);
         expect(await thx.balanceOf(account.address)).to.be.equals(initialBalanceTHX);
-        expect(await dai.balanceOf(account.address)).to.be.equals(initialBalanceDAI.sub(sendAmountDAI));
+        expect(await dai.balanceOf(account.address)).to.be.equals(initialBalanceDAI.sub(sendAmountIn));
       });
 
       it('should join pool with native token using swap provider', async () => {

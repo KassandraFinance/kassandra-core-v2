@@ -1,35 +1,40 @@
 //SPDX-License-Identifier: GPL-3-or-later
 pragma solidity >=0.7.0 <0.9.0;
-
 pragma experimental ABIEncoderV2;
 
-import "@balancer-labs/v2-vault/contracts/interfaces/IVault.sol";
-import "@balancer-labs/v2-solidity-utils/contracts/openzeppelin/IERC20.sol";
+import "@balancer-labs/v2-interfaces/contracts/vault/IVault.sol";
+import "@balancer-labs/v2-interfaces/contracts/solidity-utils/openzeppelin/IERC20.sol";
 import "@balancer-labs/v2-solidity-utils/contracts/openzeppelin/Ownable.sol";
 import "@balancer-labs/v2-solidity-utils/contracts/openzeppelin/SafeERC20.sol";
-import "@balancer-labs/v2-standalone-utils/contracts/BalancerHelpers.sol";
-
-import "hardhat/console.sol";
+import "@balancer-labs/v2-solidity-utils/contracts/helpers/ERC20Helpers.sol";
 
 contract ProxyInvest is Ownable {
     using SafeERC20 for IERC20;
 
     uint8 public constant EXACT_TOKENS_IN_FOR_BPT_OUT = 1; 
     
-    IVault public vault;
-    address public swapProvider;
+    IVault private _vault;
+    address private _swapProvider;
 
-    constructor(IVault _vault, address _swapProvider) {
-        vault = _vault;
-        swapProvider = _swapProvider;
+    constructor(IVault vault, address swapProvider) {
+        _vault = vault;
+        _swapProvider = swapProvider;
     }
 
-    function setSwapProvider(address _swapProvider) external onlyOwner {
-        swapProvider = _swapProvider;
+    function getVault() external view returns (IVault) {
+        return _vault;
     }
 
-    function setVault(IVault _vault) external onlyOwner {
-        vault = _vault;
+    function getSwapProvider() external view returns (address) {
+        return _swapProvider;
+    }
+
+    function setSwapProvider(address swapProvider) external onlyOwner {
+        _swapProvider = swapProvider;
+    }
+
+    function setVault(IVault vault) external onlyOwner {
+        _vault = vault;
     }
 
     function joinPoolExactTokenInWithSwap(
@@ -42,37 +47,30 @@ contract ProxyInvest is Ownable {
     ) external payable {
         if(msg.value == 0) {
             tokenIn.safeTransferFrom(msg.sender, address(this), tokenAmountIn);
-            if (tokenIn.allowance(address(this), swapProvider) < tokenAmountIn) {
-                tokenIn.safeApprove(swapProvider, type(uint256).max);
+            if (tokenIn.allowance(address(this), _swapProvider) < tokenAmountIn) {
+                tokenIn.safeApprove(_swapProvider, type(uint256).max);
             }
         }
 
-        (bool success, bytes memory response) = address(swapProvider).call{ value: msg.value }(data);
+        (bool success, bytes memory response) = address(_swapProvider).call{ value: msg.value }(data);
         require(success, string(response));
 
-        (IERC20[] memory tokens, , ) = vault.getPoolTokens(poolId);
+        (IERC20[] memory tokens, , ) = _vault.getPoolTokens(poolId);
 
         uint256 size = tokens.length;
         uint256[] memory maxAmountsIn = new uint256[](size);
-        IAsset[] memory assets;
-        
-        assembly {
-            assets := tokens
-        }
+        IAsset[] memory assets = _asIAsset(tokens);
 
         for (uint i = 0; i < size; i++) {
             if(tokens[i] == tokenExchange) {
                 maxAmountsIn[i] = tokenExchange.balanceOf(address(this));
-                if (tokenExchange.allowance(address(this), address(vault)) < maxAmountsIn[i]) {
-                    tokenExchange.safeApprove(address(vault), type(uint256).max);
+                if (tokenExchange.allowance(address(this), address(_vault)) < maxAmountsIn[i]) {
+                    tokenExchange.safeApprove(address(_vault), type(uint256).max);
                 }
             } else {
                 maxAmountsIn[i] = 0;
             }
         }
-
-        require(assets.length == tokens.length, "INVALID_TOKEN_EXCHANGE");
-
         IVault.JoinPoolRequest memory request = IVault.JoinPoolRequest({
             assets: assets,
             maxAmountsIn: maxAmountsIn,
@@ -80,7 +78,7 @@ contract ProxyInvest is Ownable {
             fromInternalBalance: false
         });
 
-        vault.joinPool(poolId, address(this), msg.sender, request);
+        _vault.joinPool(poolId, address(this), msg.sender, request);
     }
 
     function joinPool(bytes32 poolId, IVault.JoinPoolRequest memory request) external payable {
@@ -92,25 +90,23 @@ contract ProxyInvest is Ownable {
 
             IERC20(tokenIn).safeTransferFrom(msg.sender, address(this), tokenAmountIn);
 
-            if (IERC20(tokenIn).allowance(address(this), address(vault)) < request.maxAmountsIn[i]) {
-                IERC20(tokenIn).safeApprove(address(vault), type(uint256).max);
+            if (IERC20(tokenIn).allowance(address(this), address(_vault)) < request.maxAmountsIn[i]) {
+                IERC20(tokenIn).safeApprove(address(_vault), type(uint256).max);
             }
         }
 
-        vault.joinPool(poolId, address(this), msg.sender, request);
+        _vault.joinPool(poolId, address(this), msg.sender, request);
     }
 
     function exitPoolExactIn(bytes32 poolId, IVault.ExitPoolRequest memory request) external payable {
         (, uint tokenInAmount) = abi.decode(request.userData, (uint256, uint256));
-        (address pool, ) = vault.getPool(poolId);
-
-        console.log(tokenInAmount);
+        (address pool, ) = _vault.getPool(poolId);
 
         IERC20(pool).safeTransferFrom(msg.sender, address(this), tokenInAmount);
-        if (IERC20(pool).allowance(address(this), address(vault)) < tokenInAmount) {
-            IERC20(pool).safeApprove(address(vault), type(uint256).max);
+        if (IERC20(pool).allowance(address(this), address(_vault)) < tokenInAmount) {
+            IERC20(pool).safeApprove(address(_vault), type(uint256).max);
         }
         
-        vault.exitPool(poolId, address(this), msg.sender, request);
+        _vault.exitPool(poolId, address(this), msg.sender, request);
     }
 }
