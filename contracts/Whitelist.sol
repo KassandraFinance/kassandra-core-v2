@@ -4,7 +4,6 @@ pragma experimental ABIEncoderV2;
 
 import "@balancer-labs/v2-solidity-utils/contracts/openzeppelin/Ownable.sol";
 import "./interfaces/IWhitelist.sol";
-import "hardhat/console.sol";
 
 contract KassandraWhitelist is IWhitelist, Ownable {
     bool internal constant _IS_BLACKLIST = false;

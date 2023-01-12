@@ -5,9 +5,11 @@ pragma experimental ABIEncoderV2;
 import "@balancer-labs/v2-interfaces/contracts/pool-utils/IManagedPool.sol";
 import "@balancer-labs/v2-solidity-utils/contracts/openzeppelin/Ownable.sol";
 
-import "./managed/ManagedPool.sol";
-import "./BasePoolController.sol";
+import "../balancer-v2-submodule/pkg/pool-weighted/contracts/managed/ManagedPool.sol";
+
 import "./interfaces/IPrivateInvestors.sol";
+
+import "./BasePoolController.sol";
 
 contract PrivateInvestors is IPrivateInvestors, Ownable {
     // pool address -> investor -> bool

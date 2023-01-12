@@ -15,14 +15,12 @@
 pragma solidity ^0.7.0;
 pragma experimental ABIEncoderV2;
 
-// import "./ManagedPoolController.sol";
-import "./managed/ManagedPoolFactory.sol";
+import "../balancer-v2-submodule/pkg/pool-weighted/contracts/managed/ManagedPoolFactory.sol";
+import "../balancer-v2-submodule/pkg/pool-weighted/contracts/managed/ManagedPool.sol";
 
 import "./KassandraManagedPoolController.sol";
 
 import "./interfaces/IAuthorizedManagers.sol";
-
-import "hardhat/console.sol";
 
 /**
  * @dev Deploys a new `ManagedPool` owned by a ManagedPoolController with the specified rights.
