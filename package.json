@@ -6,6 +6,7 @@
   "scripts": {
     "test:proxy": "npx hardhat test ./test/ProxyInvest.spec.ts",
     "test:comm": "npx hardhat test ./test/CommunityStore.spec.ts",
+    "compile": "yarn hardhat compile",
     "lint": "yarn lint:solidity",
     "lint:solidity": "solhint 'contracts/**/*.sol'"
   },
