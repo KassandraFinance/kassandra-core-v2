@@ -15,4 +15,12 @@ contract ManagedPoolMock {
     function getPoolId() external pure returns (bytes32) {
         return bytes32("0x");
     }
+
+    function setMustAllowlistLPs(bool mustAllowlistLPs) external {
+
+    }
+    
+    function addAllowedAddress(address member) external {
+
+    }
 }
