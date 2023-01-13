@@ -99,7 +99,7 @@ describe("KassandraControlledManagedPoolFactory", () => {
         
         await authorizedManagers.setFactory(controllerManagedFactory.address);
         await authorizedManagers.setManager(manager.address, 2);
-        
+        await privateInvestors.setFactory(controllerManagedFactory.address);
         
         controller = await ethers.getContractFactory("KassandraManagedPoolController");
         await wmatic.connect(manager).approve(controllerManagedFactory.address, await wmatic.balanceOf(manager.address));
@@ -122,7 +122,7 @@ describe("KassandraControlledManagedPoolFactory", () => {
             settingsParams,
             feesSettings,
             maxAmountsIn,
-            false
+            true
         )
         
         await controllerManagedFactory.connect(manager).create(
@@ -130,22 +130,28 @@ describe("KassandraControlledManagedPoolFactory", () => {
             settingsParams,
             feesSettings,
             maxAmountsIn,
-            false
+            true
         )
 
         pool = await ethers.getContractAt("ManagedPool", response.pool);
         newController = controller.attach(response.poolController);
+
+
+        await wmatic.connect(investor).approve(newController.address, ethers.utils.parseEther("100"));
+        await dai.connect(investor).approve(newController.address, ethers.utils.parseEther("100"));
+
         expect(response.pool).to.be.equals(await newController.pool());
-        expect(await newController.isPrivatePool()).to.false;
+        expect(await newController.isPrivatePool()).to.true;
         expect(await newController.getManager()).to.equal(manager.address);
     })
 
     it("should be able join in the pool with join kind EXACT_TOKENS_IN_FOR_BPT_OUT", async () => {
+        await newController.connect(manager).addAllowedAddress(investor.address);
         const EXACT_TOKENS_IN_FOR_BPT_OUT = 1;
         const poolId = await pool.getPoolId();
         const initBalanceManager = await pool.balanceOf(manager.address);
         const initBalanceReferral = await pool.balanceOf(referral.address);
-        await wmatic.connect(investor).approve(newController.address, ethers.utils.parseEther("100"));
+        
         const amounts = [ethers.utils.parseEther("2"), ethers.BigNumber.from("0")];
         const userData = defaultAbiCoder.encode(['uint256', 'uint256[]', 'uint256'], [EXACT_TOKENS_IN_FOR_BPT_OUT, amounts, 0]);
         const request = {
@@ -174,13 +180,12 @@ describe("KassandraControlledManagedPoolFactory", () => {
     })
 
     it("should be able join in the pool with join kind TOKEN_IN_FOR_EXACT_BPT_OUT", async () => {
-        const amountToInvestor = "17000000000";
         const TOKEN_IN_FOR_EXACT_BPT_OUT = 2;
+        const amountToInvestor = ethers.BigNumber.from("17000000000");
         const poolId = await pool.getPoolId();
         const initialBalanceInvestor = await pool.balanceOf(investor.address);
         const initBalanceManager = await pool.balanceOf(manager.address);
         const initBalanceReferral = await pool.balanceOf(referral.address);
-        await dai.connect(investor).approve(newController.address, ethers.utils.parseEther("2"));
         const amounts = [ethers.utils.parseEther("0"), ethers.utils.parseEther("2")];
         const userData = defaultAbiCoder.encode(['uint256', 'uint256', 'uint256'], [TOKEN_IN_FOR_EXACT_BPT_OUT, amountToInvestor, 1]);
         const request = {
@@ -189,19 +194,51 @@ describe("KassandraControlledManagedPoolFactory", () => {
             userData,
             fromInternalBalance: false
         }
-        const response = await balancerHelper.callStatic.queryJoin(poolId, newController.address, newController.address, request);
+        const queryToController = await newController.connect(investor).callStatic.joinPool(investor.address, referral.address, request);
+        const totalAmountOut = queryToController.amountToManager.add(queryToController.amountToRecipient).add(queryToController.amountToReferrer);
+
         await newController.connect(investor).joinPool(investor.address, referral.address, request);
         
         const fees = await newController.getInvestFees();
-        const amountOut = response.bptOut;
-        const amountToManager = amountOut.mul(fees.feesToManager).div(1e18.toString());
-        const amountToReferral = amountOut.mul(fees.feesToReferral).div(1e18.toString());
+        const amountToManager = totalAmountOut.mul(fees.feesToManager).div(1e18.toString());
+        const amountToReferral = totalAmountOut.mul(fees.feesToReferral).div(1e18.toString());
  
         const balanceManager = (await pool.balanceOf(manager.address)).sub(initBalanceManager);
         const balanceReferral = (await pool.balanceOf(referral.address)).sub(initBalanceReferral);
+        const amountInvestor = (await pool.balanceOf(investor.address)).sub(initialBalanceInvestor);
+
+        expect(amountInvestor.eq(amountToInvestor)).to.true;
+        expect(balanceManager.eq(amountToManager)).to.true;
+        expect(balanceReferral.eq(amountToReferral)).to.true;
+    })
+
+    it("should be able join in the pool with join kind ALL_TOKENS_IN_FOR_EXACT_BPT_OUT", async () => {
+        const ALL_TOKENS_IN_FOR_EXACT_BPT_OUT = 3;
+        const poolId = await pool.getPoolId();
+        const amountToInvestor = ethers.BigNumber.from("170000000000000");
+        const initialBalanceInvestor = await pool.balanceOf(investor.address);
+        const initialBalanceReferrer = await pool.balanceOf(referral.address);
+        const initialBalanceManager = await pool.balanceOf(manager.address);
+        const initialBalanceInvestorWMATIC = await wmatic.balanceOf(investor.address); 
+        const initialBalanceInvestorDAI = await dai.balanceOf(investor.address); 
+
+        const userData = defaultAbiCoder.encode(['uint256', 'uint256'], [ALL_TOKENS_IN_FOR_EXACT_BPT_OUT, amountToInvestor]);
+        const amounts = [ethers.utils.parseEther("1"), ethers.utils.parseEther("1")];
+        const request = {
+            assets: [pool.address, ...settingsParams.tokens],
+            maxAmountsIn:[0, ...amounts],
+            userData,
+            fromInternalBalance: false
+        }
+        const responsequery = await newController.connect(investor).callStatic.joinPool(investor.address, referral.address, request);
+
+        await newController.connect(investor).joinPool(investor.address, referral.address, request);
 
         expect((await pool.balanceOf(investor.address)).sub(initialBalanceInvestor).eq(amountToInvestor)).to.true;
-        expect(balanceManager.gte(amountToManager)).to.true;
-        expect(balanceReferral.gte(amountToReferral)).to.true;
+        expect((await pool.balanceOf(referral.address)).sub(initialBalanceReferrer).eq(responsequery.amountToReferrer)).to.true;
+        expect((await pool.balanceOf(manager.address)).sub(initialBalanceManager).eq(responsequery.amountToManager)).to.true;
+
+        expect(initialBalanceInvestorWMATIC.sub(await wmatic.balanceOf(investor.address)).lte(responsequery.amountsIn[1])).to.true;
+        expect(initialBalanceInvestorDAI.sub(await dai.balanceOf(investor.address)).lte(responsequery.amountsIn[2])).to.true;
     })
 })

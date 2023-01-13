@@ -118,7 +118,8 @@ contract KassandraControlledManagedPoolFactory {
         poolController.initialize(pool);
 
         _authorizedManagers.managerCreatedPool(msg.sender);
-
+        _privateInvestors.setController(address(poolController));
+        
         _isPoolFromFactory[pool] = true;
         emit ManagedPoolCreated(pool, address(poolController));
     }

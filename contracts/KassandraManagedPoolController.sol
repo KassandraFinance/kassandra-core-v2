@@ -25,8 +25,6 @@ import "./interfaces/IPrivateInvestors.sol";
 
 import "./BasePoolController.sol";
 
-import "hardhat/console.sol";
-
 /**
  * @dev Pool controller that serves as the "owner" of a Managed pool, and is in turn owned by
  * an account empowered to make calls on this contract, which are forwarded to the underlyling pool.
@@ -41,6 +39,9 @@ contract KassandraManagedPoolController is BasePoolController {
     using SafeERC20 for IERC20;
     using WordCodec for bytes32;
     using FixedPoint for uint256;
+
+    uint256 constant TOKEN_IN_FOR_EXACT_BPT_OUT = 2;
+    uint256 constant ALL_TOKENS_IN_FOR_EXACT_BPT_OUT = 3;
 
     struct FeesPercentages {
         uint64 feesToManager;
@@ -64,7 +65,7 @@ contract KassandraManagedPoolController is BasePoolController {
      */
     constructor(
         BasePoolRights memory baseRights,
-        FeesPercentages memory feesPercentages, 
+        FeesPercentages memory feesPercentages,
         uint256 minWeightChangeDuration,
         address manager,
         IPrivateInvestors privateInvestors,
@@ -91,75 +92,177 @@ contract KassandraManagedPoolController is BasePoolController {
         return (_feesPercentages.feesToManager, _feesPercentages.feesToReferral);
     }
 
-    function joinPool(address recipient, address referrer, IVault.JoinPoolRequest memory request) external {
+    function joinPool(
+        address recipient,
+        address referrer,
+        IVault.JoinPoolRequest memory request
+    )
+        external
+        returns (
+            uint256 amountToRecipient,
+            uint256 amountToReferrer,
+            uint256 amountToManager,
+            uint256[] memory amountsIn
+        )
+    {
+        _require(!_isPrivatePool || _privateInvestors.isInvestorAllowed(pool, recipient), Errors.SENDER_NOT_ALLOWED);
+
         uint256 joinKind = abi.decode(request.userData, (uint256));
         bytes32 poolId = IManagedPool(pool).getPoolId();
         if (joinKind == 1) {
-            _joinPoolExactIn(poolId, recipient, referrer, request);
+            return _joinPoolExactIn(poolId, recipient, referrer, request);
         } else if (joinKind == 2) {
-            _joinPoolExactOut(poolId, recipient, referrer, request);
+            return _joinPoolExactOut(poolId, recipient, referrer, request);
+        } else if (joinKind == 3) {
+            return _joinPoolAllTokensExactOut(poolId, recipient, referrer, request);
         }
     }
 
-    uint256 constant TOKEN_IN_FOR_EXACT_BPT_OUT = 2;
-    function _joinPoolExactOut(bytes32 poolId, address recipient, address referrer, IVault.JoinPoolRequest memory request) internal {
-        (, uint256 bptAmountToRecipient, uint256 indexToken) = abi.decode(request.userData, (uint256, uint256, uint256));
-        uint256 bptAmount = bptAmountToRecipient.divDown(FixedPoint.ONE.sub(_feesPercentages.feesToManager).sub(_feesPercentages.feesToReferral));
-
-        uint256 indexTokenIn = indexToken + 1;
-        IERC20 tokenIn = IERC20(address(request.assets[indexTokenIn]));
-        if (tokenIn.allowance(address(this), address(_vault)) < type(uint256).max) {
-            tokenIn.safeApprove(address(_vault), type(uint256).max);
-        }
-
-        tokenIn.safeTransferFrom(msg.sender, address(this), request.maxAmountsIn[indexTokenIn]);
-
-        request.userData = abi.encode(TOKEN_IN_FOR_EXACT_BPT_OUT, bptAmount, indexToken);
-
-        _vault.joinPool(poolId, address(this), address(this), request);
-
-        address _manager = getManager();
-        
-        if (referrer == address(0)) {
-            referrer = _manager;
-        }
-
-        uint256 amountToManager = bptAmount.mulDown(_feesPercentages.feesToManager);
-        uint256 amountToReferral = bptAmount.mulDown(_feesPercentages.feesToReferral);
-        
+    function _joinPoolExactIn(
+        bytes32 poolId,
+        address recipient,
+        address referrer,
+        IVault.JoinPoolRequest memory request
+    )
+        internal
+        returns (
+            uint256 amountToRecipient,
+            uint256 amountToReferrer,
+            uint256 amountToManager,
+            uint256[] memory amountsIn
+        )
+    {
         IERC20 poolToken = IERC20(pool);
-        
-        poolToken.safeTransfer(recipient, bptAmountToRecipient);
-        poolToken.safeTransfer(_manager, amountToManager);
-        poolToken.safeTransfer(referrer, amountToReferral);
-        tokenIn.safeTransfer(recipient, tokenIn.balanceOf(address(this)));
-    }
-    
-    function _joinPoolExactIn(bytes32 poolId, address recipient, address referrer, IVault.JoinPoolRequest memory request) internal {
+        uint256 initialPoolAmount = poolToken.balanceOf(address(this));
         for (uint256 i = 1; i < request.assets.length; i++) {
             IERC20 tokenIn = IERC20(address(request.assets[i]));
             if (tokenIn.allowance(address(this), address(_vault)) < request.maxAmountsIn[i]) {
-                tokenIn.safeApprove(address(_vault), request.maxAmountsIn[i]);
+                tokenIn.safeApprove(address(_vault), type(uint256).max);
             }
             tokenIn.safeTransferFrom(msg.sender, address(this), request.maxAmountsIn[i]);
         }
 
         _vault.joinPool(poolId, address(this), address(this), request);
 
-        uint256 amountOutBPT = IERC20(pool).balanceOf(address(this));
-        uint256 amountToManager = amountOutBPT.mulDown(_feesPercentages.feesToManager);
-        uint256 amountToReferral = amountOutBPT.mulDown(_feesPercentages.feesToReferral);
-        uint256 amountToInvestor = amountOutBPT.sub(amountToManager).sub(amountToReferral);
+        uint256 amountOutBPT = poolToken.balanceOf(address(this)).sub(initialPoolAmount);
+        amountToManager = amountOutBPT.mulDown(_feesPercentages.feesToManager);
+        amountToReferrer = amountOutBPT.mulDown(_feesPercentages.feesToReferral);
+        amountToRecipient = amountOutBPT.sub(amountToManager).sub(amountToReferrer);
 
         address _manager = getManager();
-        
+
         if (referrer == address(0)) {
             referrer = _manager;
         }
 
-        IERC20(pool).safeTransfer(recipient, amountToInvestor);
-        IERC20(pool).safeTransfer(_manager, amountToManager);
-        IERC20(pool).safeTransfer(referrer, amountToReferral);
+        poolToken.safeTransfer(recipient, amountToRecipient);
+        poolToken.safeTransfer(_manager, amountToManager);
+        poolToken.safeTransfer(referrer, amountToReferrer);
+
+        amountsIn = request.maxAmountsIn;
+    }
+
+    function _joinPoolExactOut(
+        bytes32 poolId,
+        address recipient,
+        address referrer,
+        IVault.JoinPoolRequest memory request
+    )
+        internal
+        returns (
+            uint256 amountToRecipient,
+            uint256 amountToReferrer,
+            uint256 amountToManager,
+            uint256[] memory amountsIn
+        )
+    {
+        uint256 indexToken;
+        (, amountToRecipient, indexToken) = abi.decode(request.userData, (uint256, uint256, uint256));
+        uint256 bptAmount = amountToRecipient.divDown(
+            FixedPoint.ONE.sub(_feesPercentages.feesToManager).sub(_feesPercentages.feesToReferral)
+        );
+        
+        uint256 indexTokenIn = indexToken + 1;
+        IERC20 tokenIn = IERC20(address(request.assets[indexTokenIn]));
+        if (tokenIn.allowance(address(this), address(_vault)) < request.maxAmountsIn[indexTokenIn]) {
+            tokenIn.safeApprove(address(_vault), type(uint256).max);
+        }
+        tokenIn.safeTransferFrom(msg.sender, address(this), request.maxAmountsIn[indexTokenIn]);
+
+        request.userData = abi.encode(TOKEN_IN_FOR_EXACT_BPT_OUT, bptAmount, indexToken);
+        _vault.joinPool(poolId, address(this), address(this), request);
+        address _manager = getManager();
+
+        if (referrer == address(0)) {
+            referrer = _manager;
+        }
+
+        amountToManager = bptAmount.mulDown(_feesPercentages.feesToManager);
+        amountToReferrer = bptAmount.mulDown(_feesPercentages.feesToReferral);
+
+        IERC20 poolToken = IERC20(pool);
+        poolToken.safeTransfer(recipient, amountToRecipient);
+        poolToken.safeTransfer(_manager, amountToManager);
+        poolToken.safeTransfer(referrer, amountToReferrer);
+
+        uint256 amountGiveBack = tokenIn.balanceOf(address(this));
+        amountsIn = new uint256[](request.maxAmountsIn.length);
+        amountsIn[indexTokenIn] = request.maxAmountsIn[indexTokenIn].sub(amountGiveBack);
+        tokenIn.safeTransfer(recipient, amountGiveBack);
+    }
+
+    function _joinPoolAllTokensExactOut(
+        bytes32 poolId,
+        address recipient,
+        address referrer,
+        IVault.JoinPoolRequest memory request
+    )
+        internal
+        returns (
+            uint256 amountToRecipient,
+            uint256 amountToReferrer,
+            uint256 amountToManager,
+            uint256[] memory amountsIn
+        )
+    {
+        (, amountToRecipient) = abi.decode(request.userData, (uint256, uint256));
+        uint256 bptAmount = amountToRecipient.divDown(
+            FixedPoint.ONE.sub(_feesPercentages.feesToManager).sub(_feesPercentages.feesToReferral)
+        );
+        for (uint256 i = 1; i < request.assets.length; i++) {
+            IERC20 tokenIn = IERC20(address(request.assets[i]));
+            if (tokenIn.allowance(address(this), address(_vault)) < request.maxAmountsIn[i]) {
+                tokenIn.safeApprove(address(_vault), type(uint256).max);
+            }
+            tokenIn.safeTransferFrom(msg.sender, address(this), request.maxAmountsIn[i]);
+        }
+        request.userData = abi.encode(ALL_TOKENS_IN_FOR_EXACT_BPT_OUT, bptAmount);
+
+        _vault.joinPool(poolId, address(this), address(this), request);
+
+        address _manager = getManager();
+
+        if (referrer == address(0)) {
+            referrer = _manager;
+        }
+
+        amountToManager = bptAmount.mulDown(_feesPercentages.feesToManager);
+        amountToReferrer = bptAmount.mulDown(_feesPercentages.feesToReferral);
+
+        IERC20 poolToken = IERC20(pool);
+
+        poolToken.safeTransfer(recipient, amountToRecipient);
+        poolToken.safeTransfer(_manager, amountToManager);
+        poolToken.safeTransfer(referrer, amountToReferrer);
+
+        amountsIn = request.maxAmountsIn;
+
+        for (uint256 i = 1; i < request.assets.length; i++) {
+            IERC20 tokenIn = IERC20(address(request.assets[i]));
+            uint256 amountGiveBack = tokenIn.balanceOf(address(this));
+            amountsIn[i] = request.maxAmountsIn[i].sub(amountGiveBack);
+            tokenIn.safeTransfer(msg.sender, amountGiveBack);
+        }
     }
 
     function isPrivatePool() external view returns (bool) {
@@ -273,13 +376,9 @@ contract KassandraManagedPoolController is BasePoolController {
     /**
      * @dev Pass a call to ManagedPool's setManagementAumFeePercentage through to the underlying pool.
      */
-    function setManagementAumFeePercentage(uint256 managementAumFeePercentage)
-        external
-        virtual
-        onlyManager
-        withBoundPool
-        returns (uint256)
-    {
+    function setManagementAumFeePercentage(
+        uint256 managementAumFeePercentage
+    ) external virtual onlyManager withBoundPool returns (uint256) {
         _require(canChangeManagementFees(), Errors.FEATURE_DISABLED);
 
         return IManagedPool(pool).setManagementAumFeePercentage(managementAumFeePercentage);
