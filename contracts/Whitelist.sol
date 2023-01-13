@@ -26,6 +26,7 @@ contract KassandraWhitelist is IWhitelist, Ownable {
     mapping(address => bool) private _tokenList;
 
     event TokenAdded(address indexed token);
+    event TokenRemoved(address indexed token);
 
     function isTokenWhitelisted(address token) external view override returns (bool) {
         return _tokenList[token];
@@ -49,25 +50,30 @@ contract KassandraWhitelist is IWhitelist, Ownable {
         return _IS_BLACKLIST;
     }
 
-    function addTokenToList(address token, bool allowance) external onlyOwner {
+    function addTokenToList(address token) external onlyOwner {
         require(token != address(0), "ERR_ZERO_ADDRESS");
-        require(_tokenList[token] != allowance, "ERR_ALREADY_INCLUDED");
+        require(_tokenList[token] == false, "ERR_ALREADY_INCLUDED");
 
-        _tokenList[token] = allowance;
+        _tokenList[token] = true;
 
-        if (allowance) {
-            _tokens.push(token);
-            _indexToken[token] = _tokens.length;
-        } else {
-            uint256 index = _indexToken[token];
-            _tokens[index - 1] = _tokens[_tokens.length - 1];
-            _indexToken[_tokens[_tokens.length - 1]] = index;
-            _indexToken[token] = 0;
-            _tokens.pop();
-        }
+        _tokens.push(token);
+        _indexToken[token] = _tokens.length;
 
         emit TokenAdded(token);
     }
 
-    // criar remove removetokenfromlist e evendo token removed
+    function removeTokenFromList(address token) external onlyOwner {
+        require(token != address(0), "ERR_ZERO_ADDRESS");
+        require(_tokenList[token] == true, "ERR_NOTHING_INCLUDED");
+        
+        _tokenList[token] = false;
+
+        uint256 index = _indexToken[token];
+        _tokens[index - 1] = _tokens[_tokens.length - 1];
+        _indexToken[_tokens[_tokens.length - 1]] = index;
+        _indexToken[token] = 0;
+        _tokens.pop();
+
+        emit TokenRemoved(token);
+    }
 }

@@ -28,19 +28,19 @@ describe("Whitelist", () => {
     it("must not set whitelist if sender is not owner", async () => {
         const { whitelist, account } = await loadFixture(WhitelistDeploy);
 
-        await expect(whitelist.connect(account).addTokenToList(DAI_ADDRESS, true)).to.revertedWith("BAL#426");
+        await expect(whitelist.connect(account).addTokenToList(DAI_ADDRESS)).to.revertedWith("BAL#426");
     })
 
     it("must not set whitelist if token is zero", async () => {
         const { whitelist } = await loadFixture(WhitelistDeploy);
 
-        await expect(whitelist.addTokenToList(ethers.constants.AddressZero, true)).to.revertedWith("ERR_ZERO_ADDRESS");
+        await expect(whitelist.addTokenToList(ethers.constants.AddressZero)).to.revertedWith("ERR_ZERO_ADDRESS");
     })
 
     it("should set whitelist", async () => {
         const { whitelist } = await loadFixture(WhitelistDeploy);
         
-        await whitelist.addTokenToList(DAI_ADDRESS, true);
+        await whitelist.addTokenToList(DAI_ADDRESS);
         
         expect(await whitelist.isTokenWhitelisted(DAI_ADDRESS)).true
         expect(await whitelist.getTokens(0, 1)).deep.equal([DAI_ADDRESS]);
@@ -48,9 +48,9 @@ describe("Whitelist", () => {
 
     it("should update whitelist", async () => {
         const { whitelist, account } = await loadFixture(WhitelistDeploy);
-        await whitelist.addTokenToList(DAI_ADDRESS, true);
+        await whitelist.addTokenToList(DAI_ADDRESS);
         
-        await whitelist.addTokenToList(DAI_ADDRESS, false);
+        await whitelist.removeTokenFromList(DAI_ADDRESS);
         
         expect(await whitelist.connect(account).isTokenWhitelisted(DAI_ADDRESS)).false
         expect(await whitelist.getTokens(0, 1)).deep.equal([]);
@@ -59,9 +59,9 @@ describe("Whitelist", () => {
 
     it("should revert if token already has add", async () => {
         const { whitelist } = await loadFixture(WhitelistDeploy);
-        await whitelist.addTokenToList(DAI_ADDRESS, true);
+        await whitelist.addTokenToList(DAI_ADDRESS);
         
-        await expect(whitelist.addTokenToList(DAI_ADDRESS, true)).to.revertedWith("ERR_ALREADY_INCLUDED");
+        await expect(whitelist.addTokenToList(DAI_ADDRESS)).to.revertedWith("ERR_ALREADY_INCLUDED");
     })
 
     it("should return false if token has not been defined", async () => {
@@ -76,7 +76,7 @@ describe("Whitelist", () => {
         const take = 5;
         const filterTokens = tokens.filter((_, i) => i < 5);
         await Promise.all(tokens.map(async (address) => {
-            return await whitelist.addTokenToList(address, true);
+            return await whitelist.addTokenToList(address);
         }))
 
         const tokensList = await whitelist.getTokens(skip, take);
@@ -90,7 +90,7 @@ describe("Whitelist", () => {
         const take = 5;
         const filterTokens = tokens.filter((_, i) => i >= skip && i < take + skip);
         await Promise.all(tokens.map(async (address) => {
-            return await whitelist.addTokenToList(address, true);
+            return await whitelist.addTokenToList(address);
         }))
 
         const tokensList = await whitelist.getTokens(skip, take);
@@ -103,9 +103,9 @@ describe("Whitelist", () => {
         const skip = 0;
         const take = 10;
         await Promise.all(tokens.map(async (address) => {
-            return await whitelist.addTokenToList(address, true);
+            return await whitelist.addTokenToList(address);
         }))
-        await whitelist.addTokenToList(tokens[0], false);
+        await whitelist.removeTokenFromList(tokens[0]);
         const [removedToken, ..._tokens] = tokens;
 
         const tokensList = await whitelist.getTokens(skip, take);
@@ -119,11 +119,11 @@ describe("Whitelist", () => {
         const skip = 0;
         const take = 10;
         await Promise.all(tokens.map(async (address) => {
-            return await whitelist.addTokenToList(address, true);
+            return await whitelist.addTokenToList(address);
         }))
-        await whitelist.addTokenToList(tokens[0], false);
-        await whitelist.addTokenToList(tokens[3], false);
-        await whitelist.addTokenToList(tokens[tokens.length - 1], false);
+        await whitelist.removeTokenFromList(tokens[0]);
+        await whitelist.removeTokenFromList(tokens[3]);
+        await whitelist.removeTokenFromList(tokens[tokens.length - 1]);
 
         const tokensList = await whitelist.getTokens(skip, take);
 
@@ -138,11 +138,11 @@ describe("Whitelist", () => {
         const invalidSkip = 10;
         const take = 10;
         await Promise.all(tokens.map(async (address) => {
-            return await whitelist.addTokenToList(address, true);
+            return await whitelist.addTokenToList(address);
         }))
-        await whitelist.addTokenToList(tokens[0], false);
-        await whitelist.addTokenToList(tokens[3], false);
-        await whitelist.addTokenToList(tokens[tokens.length - 1], false);
+        await whitelist.removeTokenFromList(tokens[0]);
+        await whitelist.removeTokenFromList(tokens[3]);
+        await whitelist.removeTokenFromList(tokens[tokens.length - 1]);
 
         expect(await whitelist.getTokens(invalidSkip, take)).to.deep.equal([]);
     })
