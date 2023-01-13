@@ -15,6 +15,8 @@
 pragma solidity >=0.7.0 <0.9.0;
 
 interface IPrivateInvestors {
+    function setController(address controller) external;
+
     function isInvestorAllowed(address pool, address investor) external view returns (bool);
 
     function addPrivateInvestor(address investor) external;

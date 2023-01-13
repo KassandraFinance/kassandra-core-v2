@@ -20,7 +20,7 @@ contract PrivateInvestorsMock is IPrivateInvestors, Ownable {
         _factories[factory] = true;
     }
 
-    function setController(address controller) external {
+    function setController(address controller) external override {
         require(_factories[msg.sender], "ERR_NOT_AUTHORIZED");
         _controllers[controller] = true;
     }
