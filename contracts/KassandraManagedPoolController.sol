@@ -21,6 +21,9 @@ import "@balancer-labs/v2-interfaces/contracts/pool-utils/IManagedPool.sol";
 import "@balancer-labs/v2-interfaces/contracts/vault/IVault.sol";
 import "@balancer-labs/v2-interfaces/contracts/standalone-utils/IBalancerQueries.sol";
 
+import "./interfaces/IKacyAssetManager.sol";
+import "./interfaces/IKassandraRules.sol";
+import "./interfaces/IWhitelist.sol";
 import "./interfaces/IPrivateInvestors.sol";
 
 import "./BasePoolController.sol";
@@ -40,8 +43,10 @@ contract KassandraManagedPoolController is BasePoolController {
     using WordCodec for bytes32;
     using FixedPoint for uint256;
 
-    uint256 constant TOKEN_IN_FOR_EXACT_BPT_OUT = 2;
-    uint256 constant ALL_TOKENS_IN_FOR_EXACT_BPT_OUT = 3;
+    /* solhint-disable private-vars-leading-underscore */
+    uint256 constant internal TOKEN_IN_FOR_EXACT_BPT_OUT = 2;
+    uint256 constant internal ALL_TOKENS_IN_FOR_EXACT_BPT_OUT = 3;
+    /* solhint-enable private-vars-leading-underscore */
 
     struct FeesPercentages {
         uint64 feesToManager;
@@ -49,7 +54,9 @@ contract KassandraManagedPoolController is BasePoolController {
     }
 
     // The minimum weight change duration could be replaced with more sophisticated rate-limiting.
-    uint256 internal immutable _minWeightChangeDuration;
+    IKassandraRules private immutable _kassandraRules;
+    IWhitelist private immutable _whitelist;
+    address private immutable _assetManager;
 
     IPrivateInvestors private _privateInvestors;
     IVault private _vault;
@@ -66,19 +73,23 @@ contract KassandraManagedPoolController is BasePoolController {
     constructor(
         BasePoolRights memory baseRights,
         FeesPercentages memory feesPercentages,
-        uint256 minWeightChangeDuration,
+        address kassandraRules,
         address manager,
         IPrivateInvestors privateInvestors,
         bool isPrivatePool,
         IVault vault,
-        IBalancerQueries balancerQueries
+        IBalancerQueries balancerQueries,
+        address assetManager,
+        IWhitelist whitelist
     ) BasePoolController(super.encodePermissions(baseRights), manager) {
-        _minWeightChangeDuration = minWeightChangeDuration;
+        _kassandraRules = IKassandraRules(kassandraRules);
         _privateInvestors = privateInvestors;
         _isPrivatePool = isPrivatePool;
         _vault = vault;
         _feesPercentages = feesPercentages;
         _balancerQueries = balancerQueries;
+        _assetManager = assetManager;
+        _whitelist = whitelist;
     }
 
     function initialize(address poolAddress) public override {
@@ -322,7 +333,7 @@ contract KassandraManagedPoolController is BasePoolController {
      * @dev Getter for the minimum weight change duration.
      */
     function getMinWeightChangeDuration() external view returns (uint256) {
-        return _minWeightChangeDuration;
+        return _kassandraRules.minWeightChangeDuration();
     }
 
     /**
@@ -336,12 +347,26 @@ contract KassandraManagedPoolController is BasePoolController {
         uint256[] calldata endWeights
     ) external virtual onlyManager withBoundPool {
         _require(canChangeWeights(), Errors.FEATURE_DISABLED);
+        uint256 timedelta = endTime - startTime;
         _require(
-            endTime >= startTime && endTime - startTime >= _minWeightChangeDuration,
+            endTime >= startTime && timedelta >= _kassandraRules.minWeightChangeDuration(),
             Errors.WEIGHT_CHANGE_TOO_FAST
         );
 
-        IManagedPool(pool).updateWeightsGradually(startTime, endTime, tokens, endWeights);
+        IManagedPool managedPool = IManagedPool(pool);
+        uint256 maxWeightChangePerSecond = _kassandraRules.maxWeightChangePerSecond();
+        uint256[] memory startWeights = managedPool.getNormalizedWeights();
+
+        for (uint256 i = 0; i < startWeights.length; i++) {
+            _require(
+                startWeights[i] > endWeights[i]
+                ? (startWeights[i] - endWeights[i]) / timedelta < maxWeightChangePerSecond
+                : (endWeights[i] - startWeights[i]) / timedelta < maxWeightChangePerSecond,
+                Errors.WEIGHT_CHANGE_TOO_FAST
+            );
+        }
+
+        managedPool.updateWeightsGradually(startTime, endTime, tokens, endWeights);
     }
 
     /**
@@ -391,5 +416,69 @@ contract KassandraManagedPoolController is BasePoolController {
         _require(canDisableJoinExit(), Errors.FEATURE_DISABLED);
 
         IManagedPool(pool).setJoinExitEnabled(joinExitEnabled);
+    }
+
+    function addToken(
+        IERC20 tokenToAdd,
+        uint256 tokenToAddNormalizedWeight,
+        uint256 tokenToAddBalance,
+        address recipient
+    ) external onlyManager withBoundPool {
+        bool isBlacklist = _whitelist.isBlacklist();
+        bool isTokenWhitelisted = _whitelist.isTokenWhitelisted(address(tokenToAdd));
+        bool isWhitelisted;
+        // solhint-disable-next-line no-inline-assembly
+        assembly {
+            isWhitelisted := xor(isBlacklist, isTokenWhitelisted)
+        }
+        require(isWhitelisted, "ERR_TOKEN_NOT_WHITELISTED");
+
+        IManagedPool managedPool = IManagedPool(pool);
+        uint256 totalSupply = managedPool.getActualSupply();
+
+        //                totalSupply * tokenToAddNormalizedWeight
+        // mintAmount = -------------------------------------------
+        //              FixedPoint.ONE - tokenToAddNormalizedWeight
+        uint256 mintAmount = totalSupply.mulDown(tokenToAddNormalizedWeight).divDown(
+            FixedPoint.ONE.sub(tokenToAddNormalizedWeight)
+        );
+
+        // First gets the tokens from msg.sender to the Asset Manager contract
+        tokenToAdd.safeTransferFrom(getManager(), _assetManager, tokenToAddBalance);
+
+        managedPool.addToken(tokenToAdd, _assetManager, tokenToAddNormalizedWeight, mintAmount, recipient);
+        IKacyAssetManager(_assetManager).addToken(tokenToAdd, tokenToAddBalance, _vault, managedPool.getPoolId());
+    }
+
+    function removeToken(
+        IERC20 tokenToRemove,
+        address sender
+    ) external onlyManager withBoundPool {
+        IManagedPool managedPool = IManagedPool(pool);
+        bytes32 poolId = managedPool.getPoolId();
+
+        uint256 totalSupply = managedPool.getActualSupply();
+        (uint256 tokenToRemoveBalance, , , ) = _vault.getPoolTokenInfo(poolId, tokenToRemove);
+
+        (IERC20[] memory registeredTokens, , ) = _vault.getPoolTokens(managedPool.getPoolId());
+        uint256[] memory registeredTokensWeights = managedPool.getNormalizedWeights();
+        uint256 tokenToRemoveNormalizedWeight;
+
+        // registeredTokens contains the BPT in the first slot, registeredTokensWeights does not
+        for (uint256 i = 1; i < registeredTokens.length; i++) {
+            if (registeredTokens[i] != tokenToRemove) {
+                continue;
+            }
+
+            tokenToRemoveNormalizedWeight = registeredTokensWeights[i - 1];
+            break;
+        }
+
+        IKacyAssetManager(_assetManager).removeToken(tokenToRemove, tokenToRemoveBalance, _vault, poolId);
+
+        // burnAmount = totalSupply * tokenToRemoveNormalizedWeight
+        uint256 burnAmount = totalSupply.mulDown(tokenToRemoveNormalizedWeight);
+
+        managedPool.removeToken(tokenToRemove, burnAmount, sender);
     }
 }

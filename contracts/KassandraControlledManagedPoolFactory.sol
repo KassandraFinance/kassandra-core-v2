@@ -31,6 +31,8 @@ contract KassandraControlledManagedPoolFactory {
 
     // The address of the ManagedPoolFactory used to deploy the ManagedPool
     address public immutable managedPoolFactory;
+    address public immutable kassandraRules;
+    address public immutable assetManager;
     IVault private _vault;
     IBalancerQueries private _balancerQueries;
     IAuthorizedManagers private _authorizedManagers;
@@ -44,13 +46,17 @@ contract KassandraControlledManagedPoolFactory {
         IPrivateInvestors privateInvestors,
         IAuthorizedManagers authorizedManagers,
         IVault vault,
-        IBalancerQueries balancerQueries
+        IBalancerQueries balancerQueries,
+        address rules,
+        address assetManagerAddress
     ) {
         managedPoolFactory = factory;
         _authorizedManagers = authorizedManagers;
         _privateInvestors = privateInvestors;
         _vault = vault;
         _balancerQueries = balancerQueries;
+        kassandraRules = rules;
+        assetManager = assetManagerAddress;
     }
 
     /**
@@ -60,6 +66,7 @@ contract KassandraControlledManagedPoolFactory {
         ManagedPool.ManagedPoolParams memory params,
         ManagedPoolSettings.ManagedPoolSettingsParams memory settingsParams,
         KassandraManagedPoolController.FeesPercentages memory feesSettings,
+        IWhitelist whitelist,
         uint256[] memory amountsIn,
         bool isPrivatePool
     ) external returns (address pool, KassandraManagedPoolController poolController) {
@@ -67,17 +74,22 @@ contract KassandraControlledManagedPoolFactory {
         _require(amountsIn.length == settingsParams.tokens.length, Errors.INPUT_LENGTH_MISMATCH);
 
         settingsParams.mustAllowlistLPs = false;
-        uint256 minWeightChangeDuration = 100; // verificar com o keven
 
         poolController = new KassandraManagedPoolController(
-            BasePoolController.BasePoolRights({ canTransferOwnership: true, canChangeSwapFee: true, canUpdateMetadata: true }),
+            BasePoolController.BasePoolRights({
+                canTransferOwnership: true,
+                canChangeSwapFee: true,
+                canUpdateMetadata: true
+            }),
             feesSettings,
-            minWeightChangeDuration,
+            kassandraRules,
             msg.sender,
             _privateInvestors,
             isPrivatePool,
             _vault,
-            _balancerQueries
+            _balancerQueries,
+            assetManager,
+            whitelist
         );
 
 
