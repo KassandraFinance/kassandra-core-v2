@@ -35,7 +35,7 @@ contract PrivateInvestors is IPrivateInvestors, Ownable {
     }
 
     function setController(address controller) external override {
-        require(_factories[msg.sender], "ERR_NOT_AUTHORIZED");
+        _require(_factories[msg.sender], Errors.SENDER_NOT_ALLOWED);
         _controllers[controller] = true;
     }
 
@@ -44,13 +44,13 @@ contract PrivateInvestors is IPrivateInvestors, Ownable {
     }
 
     function addPrivateInvestor(address investor) external override {
-        require(_controllers[msg.sender], "ERR_NOT_AUTHORIZED");
+        _require(_controllers[msg.sender], Errors.SENDER_NOT_ALLOWED);
 
         address pool = BasePoolController(msg.sender).pool();
         address owner = ManagedPool(pool).getOwner();
 
-        require(owner == msg.sender, "ERR_INVALID_OWNER");
-        require(_allowedInvestors[pool][investor] != true, "ADDRESS_ALREADY_ALLOWLISTED");
+        _require(owner == msg.sender, Errors.CALLER_IS_NOT_OWNER);
+        _require(_allowedInvestors[pool][investor] != true, Errors.ADDRESS_ALREADY_ALLOWLISTED);
 
         _allowedInvestors[pool][investor] = true;
 
@@ -58,13 +58,13 @@ contract PrivateInvestors is IPrivateInvestors, Ownable {
     }
 
     function removePrivateInvestor(address investor) external override {
-        require(_controllers[msg.sender], "ERR_NOT_AUTHORIZED");
+        _require(_controllers[msg.sender], Errors.SENDER_NOT_ALLOWED);
 
         address pool = BasePoolController(msg.sender).pool();
         address owner = ManagedPool(pool).getOwner();
 
-        require(owner == msg.sender, "ERR_INVALID_OWNER");
-        require(_allowedInvestors[pool][investor] != false, "ADDRESS_NOT_ALLOWLISTED");
+        _require(owner == msg.sender, Errors.CALLER_IS_NOT_OWNER);
+        _require(_allowedInvestors[pool][investor] != false, Errors.ADDRESS_NOT_ALLOWLISTED);
 
         _allowedInvestors[pool][investor] = false;
 

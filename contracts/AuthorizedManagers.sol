@@ -17,6 +17,7 @@ pragma experimental ABIEncoderV2;
 
 import "@balancer-labs/v2-solidity-utils/contracts/openzeppelin/Ownable.sol";
 import "./interfaces/IAuthorizedManagers.sol";
+import "./lib/KacyErrors.sol";
 
 contract AuthorizedManagers is IAuthorizedManagers, Ownable {
     address private _factory;
@@ -39,7 +40,7 @@ contract AuthorizedManagers is IAuthorizedManagers, Ownable {
     }
 
     function setManager(address manager, uint8 qtdApproved) external onlyOwner {
-        require(manager != address(0), "ERR_ZERO_ADDRESS");
+        require(manager != address(0), KacyErrors.ZERO_ADDRESS);
         _manager[manager] = qtdApproved;
     }
 

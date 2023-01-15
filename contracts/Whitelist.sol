@@ -52,7 +52,7 @@ contract KassandraWhitelist is IWhitelist, Ownable {
 
     function addTokenToList(address token) external onlyOwner {
         require(token != address(0), "ERR_ZERO_ADDRESS");
-        require(_tokenList[token] == false, "ERR_ALREADY_INCLUDED");
+        _require(_tokenList[token] == false, Errors.TOKEN_ALREADY_REGISTERED);
 
         _tokenList[token] = true;
 
@@ -64,7 +64,7 @@ contract KassandraWhitelist is IWhitelist, Ownable {
 
     function removeTokenFromList(address token) external onlyOwner {
         require(token != address(0), "ERR_ZERO_ADDRESS");
-        require(_tokenList[token] == true, "ERR_NOTHING_INCLUDED");
+        _require(_tokenList[token] == true, Errors.TOKEN_NOT_REGISTERED);
         
         _tokenList[token] = false;
 

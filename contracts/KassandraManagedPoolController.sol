@@ -431,7 +431,7 @@ contract KassandraManagedPoolController is BasePoolController {
         assembly {
             isWhitelisted := xor(isBlacklist, isTokenWhitelisted)
         }
-        require(isWhitelisted, "ERR_TOKEN_NOT_WHITELISTED");
+        _require(isWhitelisted, Errors.INVALID_TOKEN);
 
         IManagedPool managedPool = IManagedPool(pool);
         uint256 totalSupply = managedPool.getActualSupply();
