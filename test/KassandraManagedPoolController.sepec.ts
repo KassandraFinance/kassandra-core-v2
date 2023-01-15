@@ -28,27 +28,37 @@ describe("KassandraManagedPoolController", () => {
         await managedPool.deployed();
 
         const baseRights = {
-            canTransferOwnership: true, // sim 
-            canChangeSwapFee: true,     // sim
+            canTransferOwnership: true,
+            canChangeSwapFee: true,
             canUpdateMetadata: true,
         }
         const managedPoolRights = {
-            canSetMustAllowlistLPs: true, // sim / com nossa logica // consegue adicionar o endereços 
+            canSetMustAllowlistLPs: true,
         }
 
+        const KassandraRules = await ethers.getContractFactory("KassandraRules");
+        const kassandraRules = await KassandraRules.deploy();
         const minWeightChangeDuration = time.duration.days(1);
+        await kassandraRules.setMinWeightChangeDuration(minWeightChangeDuration);
+
+        const Whitelist = await ethers.getContractFactory("KassandraWhitelist");
+        const whitelist = await Whitelist.deploy();
+
+
         const KassandraManagedPoolController = await ethers.getContractFactory("KassandraManagedPoolController");
         kassandraManagedPoolController = await KassandraManagedPoolController.deploy(
             baseRights,
             { feesToManager: 0.015e18.toString(), feesToReferral: 0.015e18.toString() },
-            minWeightChangeDuration,
+            kassandraRules.address,
             manager.address,
             privateInvestors.address,
             false,
             VAULT_ADDRESS,
-            BALANCER_HELPER_ADDRESS
-            );
-            // managedPoolRights,
+            BALANCER_HELPER_ADDRESS,
+            ethers.constants.AddressZero,
+            whitelist.address
+        );
+
         await kassandraManagedPoolController.deployed();
         await managedPool.setOwner(kassandraManagedPoolController.address);
         await kassandraManagedPoolController.initialize(managedPool.address);
@@ -91,7 +101,7 @@ describe("KassandraManagedPoolController", () => {
             await expect(kassandraManagedPoolController.setPublicPool()).to.revertedWith("BAL#426");
             await expect(kassandraManagedPoolController.addAllowedAddress(investor.address)).to.revertedWith("BAL#426");
             await expect(kassandraManagedPoolController.removeAllowedAddress(investor.address)).to.revertedWith("BAL#426");
-            
+
         })
 
         it("should return true if call canChangeWeights", async () => {
@@ -125,7 +135,7 @@ describe("KassandraManagedPoolController", () => {
         it("should return throw error if call setManagementAumFeePercentage", async () => {
             await expect(kassandraManagedPoolController.connect(manager).setManagementAumFeePercentage(10)).to.revertedWith("BAL#344");
         })
-        
+
         it("should return false if call canDisableJoinExit", async () => {
             expect(await kassandraManagedPoolController.canDisableJoinExit()).to.false;
         })
