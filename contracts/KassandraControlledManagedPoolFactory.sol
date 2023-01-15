@@ -51,8 +51,8 @@ contract KassandraControlledManagedPoolFactory {
         address assetManagerAddress
     ) {
         managedPoolFactory = factory;
-        _authorizedManagers = authorizedManagers;
         _privateInvestors = privateInvestors;
+        _authorizedManagers = authorizedManagers;
         _vault = vault;
         _balancerQueries = balancerQueries;
         kassandraRules = rules;
@@ -97,10 +97,12 @@ contract KassandraControlledManagedPoolFactory {
         pool = ManagedPoolFactory(managedPoolFactory).create(params, settingsParams, address(poolController));
 
         for (uint256 i = 0; i < amountsIn.length; i++) {
-            if (IERC20(settingsParams.tokens[i]).allowance(address(this), address(_vault)) < amountsIn[i]) {
-                IERC20(settingsParams.tokens[i]).safeApprove(address(_vault), amountsIn[i]);
+            IERC20 tokenIn = IERC20(settingsParams.tokens[i]);
+            _require(whitelist.isTokenWhitelisted(address(tokenIn)), Errors.INVALID_TOKEN);
+            if (tokenIn.allowance(address(this), address(_vault)) < amountsIn[i]) {
+                tokenIn.safeApprove(address(_vault), type(uint256).max);
             }
-            IERC20(settingsParams.tokens[i]).safeTransferFrom(msg.sender, address(this), amountsIn[i]);
+            tokenIn.safeTransferFrom(msg.sender, address(this), amountsIn[i]);
         }
 
         uint256 size = amountsIn.length + 1;    
