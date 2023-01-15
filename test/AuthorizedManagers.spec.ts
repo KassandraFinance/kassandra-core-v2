@@ -23,7 +23,7 @@ describe("CreateAuthorizedManagers", () => {
     })
 
     it("should revert if manager is equal zero address", async () => {
-        await expect(authorizedManagers.setManager(ethers.constants.AddressZero, 2)).to.revertedWith("ERR_ZERO_ADDRESS");
+        await expect(authorizedManagers.setManager(ethers.constants.AddressZero, 2)).to.revertedWith("KACY_ZERO_ADDRESS");
     })
 
     it("should set manager", async () => {

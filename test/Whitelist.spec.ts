@@ -61,7 +61,7 @@ describe("Whitelist", () => {
         const { whitelist } = await loadFixture(WhitelistDeploy);
         await whitelist.addTokenToList(DAI_ADDRESS);
         
-        await expect(whitelist.addTokenToList(DAI_ADDRESS)).to.revertedWith("ERR_ALREADY_INCLUDED");
+        await expect(whitelist.addTokenToList(DAI_ADDRESS)).to.revertedWith("BAL#522");
     })
 
     it("should return false if token has not been defined", async () => {

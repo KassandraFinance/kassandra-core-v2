@@ -43,14 +43,14 @@ describe('PrivateInvestors', () => {
   it("should revert if call setController is not authorized", async () => {
     const { privateInvestors, controller } = await loadFixture(deployPrivateInvestors);
 
-    await expect(privateInvestors.setController(controller.address)).to.revertedWith('ERR_NOT_AUTHORIZED');
+    await expect(privateInvestors.setController(controller.address)).to.revertedWith('BAL#401');
   })
 
   it('should revert with ERR_NOT_AUTHORIZED if controlller is not authorized', async () => {
     const { privateInvestors, investor } = await loadFixture(deployPrivateInvestors);
 
     await expect(privateInvestors.addPrivateInvestor(investor.address)).to.revertedWith(
-      'ERR_NOT_AUTHORIZED'
+      'BAL#401'
     );
   });
 
@@ -58,7 +58,7 @@ describe('PrivateInvestors', () => {
     const { privateInvestors, invalidController, investor, factory } = await loadFixture(deployPrivateInvestors);
     await privateInvestors.connect(factory).setController(invalidController.address);
 
-    await expect(invalidController.addAllowedInvestor(investor.address, privateInvestors.address)).to.revertedWith('ERR_INVALID_OWNER');
+    await expect(invalidController.addAllowedInvestor(investor.address, privateInvestors.address)).to.revertedWith('BAL#426');
   });
 
   it('should revert with ADDRESS_ALREADY_ALLOWLISTED if investor is already allowed', async () => {
@@ -68,7 +68,7 @@ describe('PrivateInvestors', () => {
     await controller.addAllowedInvestor(investor.address, privateInvestors.address);
 
     await expect(controller.addAllowedInvestor(investor.address, privateInvestors.address)).to.revertedWith(
-      'ADDRESS_ALREADY_ALLOWLISTED'
+      'BAL#432'
     );
   });
 
@@ -85,7 +85,7 @@ describe('PrivateInvestors', () => {
     const { privateInvestors, investor } = await loadFixture(deployPrivateInvestors);
 
     await expect(privateInvestors.removePrivateInvestor(investor.address)).to.revertedWith(
-      'ERR_NOT_AUTHORIZED'
+      'BAL#401'
     );
   });
 
@@ -93,7 +93,7 @@ describe('PrivateInvestors', () => {
     const { privateInvestors, invalidController, investor, factory } = await loadFixture(deployPrivateInvestors);
     await privateInvestors.connect(factory).setController(invalidController.address);
 
-    await expect(invalidController.removeAllowedInvestor(investor.address, privateInvestors.address)).to.revertedWith('ERR_INVALID_OWNER');
+    await expect(invalidController.removeAllowedInvestor(investor.address, privateInvestors.address)).to.revertedWith('BAL#426');
   });
 
   it('should revert with ADDRESS_NOT_ALLOWLISTED if investor is not listed', async () => {
@@ -101,7 +101,7 @@ describe('PrivateInvestors', () => {
     await privateInvestors.connect(factory).setController(controller.address);
 
     await expect(controller.removeAllowedInvestor(investor.address, privateInvestors.address)).to.revertedWith(
-      'ADDRESS_NOT_ALLOWLISTED'
+      'BAL#433'
     );
   });
 
