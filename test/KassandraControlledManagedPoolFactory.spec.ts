@@ -167,6 +167,20 @@ describe("KassandraControlledManagedPoolFactory", () => {
         expect(await newController.getManager()).to.equal(manager.address);
     })
 
+    it("should revert if investor not allowed", async () => {
+        const EXACT_TOKENS_IN_FOR_BPT_OUT = 1;
+        const amounts = [ethers.utils.parseEther("2"), ethers.BigNumber.from("0")];
+        const userData = defaultAbiCoder.encode(['uint256', 'uint256[]', 'uint256'], [EXACT_TOKENS_IN_FOR_BPT_OUT, amounts, 0]);
+        const request = {
+            assets: [pool.address, ...settingsParams.tokens],
+            maxAmountsIn: [0, ...amounts],
+            userData,
+            fromInternalBalance: false
+        }
+
+        await expect(newController.connect(investor).joinPool(investor.address, referral.address, request)).revertedWith("BAL#401");
+    })
+
     it("should be able join in the pool with join kind EXACT_TOKENS_IN_FOR_BPT_OUT", async () => {
         await newController.connect(manager).addAllowedAddress(investor.address);
         const EXACT_TOKENS_IN_FOR_BPT_OUT = 1;
