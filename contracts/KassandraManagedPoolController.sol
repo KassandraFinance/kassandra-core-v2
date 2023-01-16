@@ -29,12 +29,12 @@ import "./BasePoolController.sol";
 
 /**
  * @dev Pool controller that serves as the "owner" of a Managed pool, and is in turn owned by
- * an account empowered to make calls on this contract, which are forwarded to the underlyling pool.
+ * an account empowered to make calls on this contract, which are forwarded to the underlying pool.
  *
  * This contract can place limits on whether and how these calls can be made. For instance,
  * imposing a minimum gradual weight change duration.
  *
- * While Balancer pool owners are immutable, ownership of this pool controller can be transferrable,
+ * While Balancer pool owners are immutable, ownership of this pool controller can be transferable,
  * if the corresponding permission is set.
  */
 contract KassandraManagedPoolController is BasePoolController {
