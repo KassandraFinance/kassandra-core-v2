@@ -5,7 +5,6 @@ import { ethers } from "hardhat"
 import { PrivateInvestors, KassandraManagedPoolController, ManagedPoolMock } from "../typechain-types";
 
 describe("KassandraManagedPoolController", () => {
-    const BALANCER_HELPER_ADDRESS = '0x239e55F427D44C3cc793f49bFB507ebe76638a2b';
     const VAULT_ADDRESS = "0xBA12222222228d8Ba445958a75a0704d566BF2C8";
 
     let kassandraManagedPoolController: KassandraManagedPoolController;
@@ -32,9 +31,6 @@ describe("KassandraManagedPoolController", () => {
             canChangeSwapFee: true,
             canUpdateMetadata: true,
         }
-        const managedPoolRights = {
-            canSetMustAllowlistLPs: true,
-        }
 
         const KassandraRules = await ethers.getContractFactory("KassandraRules");
         const kassandraRules = await KassandraRules.deploy();
@@ -54,7 +50,6 @@ describe("KassandraManagedPoolController", () => {
             privateInvestors.address,
             false,
             VAULT_ADDRESS,
-            BALANCER_HELPER_ADDRESS,
             ethers.constants.AddressZero,
             whitelist.address
         );

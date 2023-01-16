@@ -6,7 +6,6 @@ import { ethers, network } from "hardhat";
 import { AuthorizedManagers, BalancerHelperMock, KassandraControlledManagedPoolFactory, KassandraManagedPoolController, KassandraManagedPoolController__factory, KassandraWhitelist, ManagedPool, TokenMock } from "../typechain-types";
 
 describe("KassandraControlledManagedPoolFactory", () => {
-    const MANAGE_POOL_FACTORY_ADDRESS = "0x9Ac3E70dB606659Bf32D4BdFbb687AD193FD1F5B";
     const BALANCER_HELPER_ADDRESS = '0x239e55F427D44C3cc793f49bFB507ebe76638a2b';
     const WMATIC_ADDRESS = "0x0d500b1d8e8ef31e21c99d1db9a6444d3adf1270";
     const DAI_ADDRESS = "0x8f3Cf7ad23Cd3CaDbD9735AFf958023239c6A063";
@@ -82,7 +81,7 @@ describe("KassandraControlledManagedPoolFactory", () => {
         const Whitelist = await ethers.getContractFactory("KassandraWhitelist");
         whitelist = await Whitelist.deploy();
         await whitelist.addTokenToList(WMATIC_ADDRESS);
-        await whitelist.addTokenToList(DAI_ADDRESS);
+        
 
         const KassandraRules = await ethers.getContractFactory("KassandraRules");
         const kassandraRules = await KassandraRules.deploy();
@@ -110,7 +109,6 @@ describe("KassandraControlledManagedPoolFactory", () => {
             privateInvestors.address,
             authorizedManagers.address,
             VAULT_ADDRESS,
-            BALANCER_HELPER_ADDRESS,
             kassandraRules.address,
             ethers.constants.AddressZero
         );
@@ -136,7 +134,30 @@ describe("KassandraControlledManagedPoolFactory", () => {
         )).to.be.revertedWith("BAL#401");
     })
 
+    it("should be reversed if parameters are incompatible", async () => {
+        await expect(controllerManagedFactory.connect(manager).create(
+            managedPoolParams,
+            { ...settingsParams, tokens: [...settingsParams.tokens, ethers.constants.AddressZero]},
+            feesSettings,
+            whitelist.address,
+            maxAmountsIn,
+            false,
+        )).to.be.revertedWith("BAL#103");
+    })
+
+    it("should be reversed if token not is whitelisted", async () => {
+        await expect(controllerManagedFactory.connect(manager).create(
+            managedPoolParams,
+            settingsParams,
+            feesSettings,
+            whitelist.address,
+            maxAmountsIn,
+            false,
+        )).to.be.revertedWith("BAL#309");
+    })
+
     it("should be create pool and controller if manager already authorized", async () => {
+        await whitelist.addTokenToList(DAI_ADDRESS);
         const response = await controllerManagedFactory.connect(manager).callStatic.create(
             managedPoolParams,
             settingsParams,
@@ -276,5 +297,9 @@ describe("KassandraControlledManagedPoolFactory", () => {
 
         expect(initialBalanceInvestorWMATIC.sub(await wmatic.balanceOf(investor.address)).lte(responsequery.amountsIn[1])).to.true;
         expect(initialBalanceInvestorDAI.sub(await dai.balanceOf(investor.address)).lte(responsequery.amountsIn[2])).to.true;
+    })
+
+    it("should returns true if pool is created from Kassandra factory", async () => {
+        expect(await controllerManagedFactory.isPoolFromFactory(pool.address)).to.true;
     })
 })
