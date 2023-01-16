@@ -33,10 +33,9 @@ contract KassandraControlledManagedPoolFactory {
     address public immutable managedPoolFactory;
     address public immutable kassandraRules;
     address public immutable assetManager;
-    IVault private _vault;
-    IBalancerQueries private _balancerQueries;
-    IAuthorizedManagers private _authorizedManagers;
-    IPrivateInvestors private _privateInvestors;
+    IVault private immutable _vault;
+    IAuthorizedManagers private immutable _authorizedManagers;
+    IPrivateInvestors private immutable _privateInvestors;
     mapping(address => bool) private _isPoolFromFactory;
 
     event ManagedPoolCreated(address indexed pool, address indexed poolController);
@@ -46,17 +45,15 @@ contract KassandraControlledManagedPoolFactory {
         IPrivateInvestors privateInvestors,
         IAuthorizedManagers authorizedManagers,
         IVault vault,
-        IBalancerQueries balancerQueries,
         address rules,
         address assetManagerAddress
     ) {
         managedPoolFactory = factory;
-        _privateInvestors = privateInvestors;
-        _authorizedManagers = authorizedManagers;
-        _vault = vault;
-        _balancerQueries = balancerQueries;
         kassandraRules = rules;
         assetManager = assetManagerAddress;
+        _vault = vault;
+        _authorizedManagers = authorizedManagers;
+        _privateInvestors = privateInvestors;
     }
 
     /**
@@ -87,22 +84,24 @@ contract KassandraControlledManagedPoolFactory {
             _privateInvestors,
             isPrivatePool,
             _vault,
-            _balancerQueries,
             assetManager,
             whitelist
         );
 
+        address poolControllerAddress = address(poolController);
+        address vaultAddress = address(_vault);
+        address thisAddress = address(this);
 
         // Let the base factory deploy the pool (owner is the controller)
-        pool = ManagedPoolFactory(managedPoolFactory).create(params, settingsParams, address(poolController));
+        pool = ManagedPoolFactory(managedPoolFactory).create(params, settingsParams, poolControllerAddress);
 
         for (uint256 i = 0; i < amountsIn.length; i++) {
             IERC20 tokenIn = IERC20(settingsParams.tokens[i]);
             _require(whitelist.isTokenWhitelisted(address(tokenIn)), Errors.INVALID_TOKEN);
-            if (tokenIn.allowance(address(this), address(_vault)) < amountsIn[i]) {
-                tokenIn.safeApprove(address(_vault), type(uint256).max);
+            if (tokenIn.allowance(thisAddress, vaultAddress) < amountsIn[i]) {
+                tokenIn.safeApprove(vaultAddress, type(uint256).max);
             }
-            tokenIn.safeTransferFrom(msg.sender, address(this), amountsIn[i]);
+            tokenIn.safeTransferFrom(msg.sender, thisAddress, amountsIn[i]);
         }
 
         uint256 size = amountsIn.length + 1;    
@@ -126,16 +125,16 @@ contract KassandraControlledManagedPoolFactory {
             fromInternalBalance: false
         });
 
-        _vault.joinPool(IManagedPool(pool).getPoolId(), address(this), msg.sender, request);
+        _vault.joinPool(IManagedPool(pool).getPoolId(), thisAddress, msg.sender, request);
 
         // Finally, initialize the controller
         poolController.initialize(pool);
 
         _authorizedManagers.managerCreatedPool(msg.sender);
-        _privateInvestors.setController(address(poolController));
+        _privateInvestors.setController(poolControllerAddress);
         
         _isPoolFromFactory[pool] = true;
-        emit ManagedPoolCreated(pool, address(poolController));
+        emit ManagedPoolCreated(pool, poolControllerAddress);
     }
 
     /**

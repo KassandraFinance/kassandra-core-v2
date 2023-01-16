@@ -19,7 +19,6 @@ import "@balancer-labs/v2-solidity-utils/contracts/openzeppelin/SafeERC20.sol";
 import "@balancer-labs/v2-solidity-utils/contracts/math/FixedPoint.sol";
 import "@balancer-labs/v2-interfaces/contracts/pool-utils/IManagedPool.sol";
 import "@balancer-labs/v2-interfaces/contracts/vault/IVault.sol";
-import "@balancer-labs/v2-interfaces/contracts/standalone-utils/IBalancerQueries.sol";
 
 import "./interfaces/IKacyAssetManager.sol";
 import "./interfaces/IKassandraRules.sol";
@@ -60,10 +59,9 @@ contract KassandraManagedPoolController is BasePoolController {
 
     IPrivateInvestors private _privateInvestors;
     IVault private _vault;
-    IBalancerQueries private _balancerQueries;
 
-    bool private _isPrivatePool;
     FeesPercentages private _feesPercentages;
+    bool private _isPrivatePool;
 
     /**
      * @dev Pass in the `BasePoolRights` and `ManagedPoolRights` structures, to form the complete set of
@@ -78,7 +76,6 @@ contract KassandraManagedPoolController is BasePoolController {
         IPrivateInvestors privateInvestors,
         bool isPrivatePool,
         IVault vault,
-        IBalancerQueries balancerQueries,
         address assetManager,
         IWhitelist whitelist
     ) BasePoolController(super.encodePermissions(baseRights), manager) {
@@ -87,7 +84,6 @@ contract KassandraManagedPoolController is BasePoolController {
         _isPrivatePool = isPrivatePool;
         _vault = vault;
         _feesPercentages = feesPercentages;
-        _balancerQueries = balancerQueries;
         _assetManager = assetManager;
         _whitelist = whitelist;
     }
