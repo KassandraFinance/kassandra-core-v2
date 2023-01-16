@@ -39,9 +39,9 @@ contract BasePoolController is IBasePoolController {
     // There are three basic pool rights: one for transferring ownership, one for changing the swap fee,
     // and the last for associating arbitrary metadata with the pool.
     struct BasePoolRights {
-        bool canTransferOwnership; // sim 
-        bool canChangeSwapFee;     // sim
-        bool canUpdateMetadata;    // sim ou não / verificar como ficaria
+        bool canTransferOwnership;
+        bool canChangeSwapFee;
+        bool canUpdateMetadata;
     }
 
     // The address empowered to call permissioned functions.
