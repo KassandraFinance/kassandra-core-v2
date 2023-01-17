@@ -369,15 +369,6 @@ contract KassandraManagedPoolController is BasePoolController {
         managedPool.updateWeightsGradually(startTime, endTime, tokens, endWeights);
     }
 
-    /**
-     * @dev Pass a call to ManagedPool's setSwapEnabled through to the underlying pool.
-     */
-    function setSwapEnabled(bool swapEnabled) external virtual onlyManager withBoundPool {
-        _require(canDisableSwaps(), Errors.FEATURE_DISABLED);
-
-        IManagedPool(pool).setSwapEnabled(swapEnabled);
-    }
-
     function setPublicPool() external virtual onlyManager withBoundPool {
         _require(_isPrivatePool, Errors.INVALID_OPERATION);
         _isPrivatePool = false;
@@ -396,17 +387,6 @@ contract KassandraManagedPoolController is BasePoolController {
      */
     function withdrawCollectedManagementFees(address recipient) external virtual onlyManager withBoundPool {
         IERC20(pool).safeTransfer(recipient, IERC20(pool).balanceOf(address(this)));
-    }
-
-    /**
-     * @dev Pass a call to ManagedPool's setManagementAumFeePercentage through to the underlying pool.
-     */
-    function setManagementAumFeePercentage(
-        uint256 managementAumFeePercentage
-    ) external virtual onlyManager withBoundPool returns (uint256) {
-        _require(canChangeManagementFees(), Errors.FEATURE_DISABLED);
-
-        return IManagedPool(pool).setManagementAumFeePercentage(managementAumFeePercentage);
     }
 
     function addToken(
