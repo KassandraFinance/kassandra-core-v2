@@ -42,10 +42,8 @@ contract KassandraManagedPoolController is BasePoolController {
     using WordCodec for bytes32;
     using FixedPoint for uint256;
 
-    /* solhint-disable private-vars-leading-underscore */
-    uint256 constant internal TOKEN_IN_FOR_EXACT_BPT_OUT = 2;
-    uint256 constant internal ALL_TOKENS_IN_FOR_EXACT_BPT_OUT = 3;
-    /* solhint-enable private-vars-leading-underscore */
+    uint256 constant internal _TOKEN_IN_FOR_EXACT_BPT_OUT = 2;
+    uint256 constant internal _ALL_TOKENS_IN_FOR_EXACT_BPT_OUT = 3;
 
     struct FeesPercentages {
         uint64 feesToManager;
@@ -78,7 +76,7 @@ contract KassandraManagedPoolController is BasePoolController {
         IVault vault,
         address assetManager,
         IWhitelist whitelist
-    ) BasePoolController(super.encodePermissions(baseRights), manager) {
+    ) BasePoolController(encodePermissions(baseRights), manager) {
         _kassandraRules = IKassandraRules(kassandraRules);
         _privateInvestors = privateInvestors;
         _isPrivatePool = isPrivatePool;
@@ -199,7 +197,7 @@ contract KassandraManagedPoolController is BasePoolController {
         }
         tokenIn.safeTransferFrom(msg.sender, address(this), request.maxAmountsIn[indexTokenIn]);
 
-        request.userData = abi.encode(TOKEN_IN_FOR_EXACT_BPT_OUT, bptAmount, indexToken);
+        request.userData = abi.encode(_TOKEN_IN_FOR_EXACT_BPT_OUT, bptAmount, indexToken);
         _vault.joinPool(poolId, address(this), address(this), request);
         address _manager = getManager();
 
@@ -246,7 +244,7 @@ contract KassandraManagedPoolController is BasePoolController {
             }
             tokenIn.safeTransferFrom(msg.sender, address(this), request.maxAmountsIn[i]);
         }
-        request.userData = abi.encode(ALL_TOKENS_IN_FOR_EXACT_BPT_OUT, bptAmount);
+        request.userData = abi.encode(_ALL_TOKENS_IN_FOR_EXACT_BPT_OUT, bptAmount);
 
         _vault.joinPool(poolId, address(this), address(this), request);
 
@@ -275,6 +273,9 @@ contract KassandraManagedPoolController is BasePoolController {
         }
     }
 
+    /**
+     * @dev Getter for whether that's a private pool
+     */
     function isPrivatePool() external view returns (bool) {
         return _isPrivatePool;
     }

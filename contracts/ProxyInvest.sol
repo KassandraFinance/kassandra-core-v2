@@ -65,6 +65,7 @@ contract ProxyInvest is Ownable {
             }
         }
 
+        /* solhint-disable-next-line avoid-low-level-calls */
         (bool success, bytes memory response) = address(_swapProvider).call{ value: msg.value }(data);
         require(success, string(response));
 

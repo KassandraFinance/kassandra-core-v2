@@ -92,9 +92,6 @@ contract KassandraControlledManagedPoolFactory {
         address vaultAddress = address(_vault);
         address thisAddress = address(this);
 
-        // Let the base factory deploy the pool (owner is the controller)
-        pool = ManagedPoolFactory(managedPoolFactory).create(params, settingsParams, poolControllerAddress);
-
         for (uint256 i = 0; i < amountsIn.length; i++) {
             IERC20 tokenIn = IERC20(settingsParams.tokens[i]);
             _require(whitelist.isTokenWhitelisted(address(tokenIn)), Errors.INVALID_TOKEN);
@@ -115,6 +112,9 @@ contract KassandraControlledManagedPoolFactory {
                 j++;
             }
         }
+
+        // Let the base factory deploy the pool (owner is the controller)
+        pool = ManagedPoolFactory(managedPoolFactory).create(params, settingsParams, poolControllerAddress);
         assetsWithBPT[0] = IERC20(pool);
         amountsInWithBPT[0] = type(uint256).max;
 
