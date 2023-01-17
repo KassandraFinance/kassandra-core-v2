@@ -16,6 +16,7 @@ pragma solidity >=0.7.0 <0.9.0;
 pragma experimental ABIEncoderV2;
 
 import "@balancer-labs/v2-solidity-utils/contracts/openzeppelin/Ownable.sol";
+
 import "./interfaces/IAuthorizedManagers.sol";
 import "./lib/KacyErrors.sol";
 
@@ -45,7 +46,7 @@ contract AuthorizedManagers is IAuthorizedManagers, Ownable {
     }
 
     function managerCreatedPool(address manager) external override {
-        require(msg.sender == _factory && _manager[manager] > 0, "ERR_NOT_ALLOWED");
+        _require(msg.sender == _factory && _manager[manager] > 0, Errors.SENDER_NOT_ALLOWED);
 
         _manager[manager]--;
     }
