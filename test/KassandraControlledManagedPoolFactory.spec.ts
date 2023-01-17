@@ -222,7 +222,7 @@ describe("KassandraControlledManagedPoolFactory", () => {
 
         await newController.connect(investor).joinPool(investor.address, referral.address, request);
 
-        const fees = await newController.getInvestFees();
+        const fees = await newController.getJoinFees();
         const amountOut = response.bptOut;
         const amountToManager = amountOut.mul(fees.feesToManager).div(1e18.toString());
         const amountToReferral = amountOut.mul(fees.feesToReferral).div(1e18.toString());
@@ -256,7 +256,7 @@ describe("KassandraControlledManagedPoolFactory", () => {
 
         await newController.connect(investor).joinPool(investor.address, referral.address, request);
 
-        const fees = await newController.getInvestFees();
+        const fees = await newController.getJoinFees();
         const amountToManager = totalAmountOut.mul(fees.feesToManager).div(1e18.toString());
         const amountToReferral = totalAmountOut.mul(fees.feesToReferral).div(1e18.toString());
 

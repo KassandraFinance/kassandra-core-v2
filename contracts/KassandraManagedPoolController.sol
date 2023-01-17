@@ -95,7 +95,10 @@ contract KassandraManagedPoolController is BasePoolController {
         IManagedPool(pool).addAllowedAddress(address(this));
     }
 
-    function getInvestFees() external view returns (uint64 feesToManager, uint64 feesToReferral) {
+    /**
+     * @dev Getter for the fees paid when joining the pool.
+     */
+    function getJoinFees() external view returns (uint64 feesToManager, uint64 feesToReferral) {
         return (_feesPercentages.feesToManager, _feesPercentages.feesToReferral);
     }
 
