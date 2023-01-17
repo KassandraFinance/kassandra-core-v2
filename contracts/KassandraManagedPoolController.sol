@@ -405,15 +405,6 @@ contract KassandraManagedPoolController is BasePoolController {
         return IManagedPool(pool).setManagementAumFeePercentage(managementAumFeePercentage);
     }
 
-    /**
-     * @dev Pass a call to ManagedPool's setJoinExitEnabled through to the underlying pool.
-     */
-    function setJoinExitEnabled(bool joinExitEnabled) external virtual onlyManager withBoundPool {
-        _require(canDisableJoinExit(), Errors.FEATURE_DISABLED);
-
-        IManagedPool(pool).setJoinExitEnabled(joinExitEnabled);
-    }
-
     function addToken(
         IERC20 tokenToAdd,
         uint256 tokenToAddNormalizedWeight,
