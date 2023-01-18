@@ -12,12 +12,26 @@ describe("AuthorizedManagers", () => {
         [, manager, factory] = await ethers.getSigners();
 
         const AuthorizedManagers = await ethers.getContractFactory("AuthorizedManagers");
-        authorizedManagers = await upgrades.deployProxy(AuthorizedManagers, [factory.address]) as AuthorizedManagers;
+        authorizedManagers = await upgrades.deployProxy(AuthorizedManagers) as AuthorizedManagers;
         await authorizedManagers.deployed();
+    })
+
+    it("should not allow running the initializer again", async () => {
+        await expect(authorizedManagers.initialize()).revertedWith("Initializable: contract is already initialized");
     })
 
     it("should revert if caller is not the owner", async () => {
         await expect(authorizedManagers.connect(manager).setManager(manager.address, 10)).to.revertedWith("Ownable: caller is not the owner");
+        await expect(authorizedManagers.connect(manager).setFactory(factory.address)).to.revertedWith("Ownable: caller is not the owner");
+        await expect(authorizedManagers.connect(manager).removeFactory(factory.address)).to.revertedWith("Ownable: caller is not the owner");
+    })
+
+    it("should be able to set a factory", async () => {
+        await expect(authorizedManagers.setFactory(factory.address)).not.reverted;
+    })
+
+    it("should revert if factory is already added", async () => {
+        await expect(authorizedManagers.setFactory(factory.address)).revertedWith("BAL#432");
     })
 
     it("should revert if manager is equal zero address", async () => {
@@ -47,5 +61,13 @@ describe("AuthorizedManagers", () => {
 
     it("should revert if manager is not allowed to create new pools", async () => {
         await expect(authorizedManagers.connect(factory).managerCreatedPool(manager.address)).to.revertedWith("BAL#401");
+    })
+
+    it("should be able to remove a factory", async () => {
+        await expect(authorizedManagers.removeFactory(factory.address)).not.reverted;
+    })
+
+    it("should be able to remove a factory", async () => {
+        await expect(authorizedManagers.removeFactory(factory.address)).revertedWith("BAL#433");
     })
 })

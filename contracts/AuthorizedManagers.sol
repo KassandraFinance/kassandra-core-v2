@@ -22,16 +22,21 @@ import "./interfaces/IAuthorizedManagers.sol";
 import "./lib/KacyErrors.sol";
 
 contract AuthorizedManagers is IAuthorizedManagers, OwnableUpgradeable {
-    address private _factory;
+    mapping(address => bool) private _factories;
     mapping(address => uint8) private _manager;
 
-    function initialize(address factory) public initializer {
+    function initialize() public initializer {
         __Ownable_init();
-        _factory = factory;
     }
 
     function setFactory(address factory) external onlyOwner {
-        _factory = factory;
+        _require(!_factories[factory], Errors.ADDRESS_ALREADY_ALLOWLISTED);
+        _factories[factory] = true;
+    }
+
+    function removeFactory(address factory) external onlyOwner {
+        _require(_factories[factory], Errors.ADDRESS_NOT_ALLOWLISTED);
+        _factories[factory] = false;
     }
 
     function getAllowedPoolsToCreate(address manager) external view returns (uint8) {
@@ -48,8 +53,7 @@ contract AuthorizedManagers is IAuthorizedManagers, OwnableUpgradeable {
     }
 
     function managerCreatedPool(address manager) external override {
-        _require(msg.sender == _factory && _manager[manager] > 0, Errors.SENDER_NOT_ALLOWED);
-
+        _require(_factories[msg.sender] && _manager[manager] > 0, Errors.SENDER_NOT_ALLOWED);
         _manager[manager]--;
     }
 }
