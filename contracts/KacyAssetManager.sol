@@ -17,14 +17,13 @@ pragma experimental ABIEncoderV2;
 
 import "@balancer-labs/v2-interfaces/contracts/pool-utils/IManagedPool.sol";
 import "@balancer-labs/v2-interfaces/contracts/solidity-utils/helpers/BalancerErrors.sol";
-import "@balancer-labs/v2-solidity-utils/contracts/openzeppelin/Ownable.sol";
-// import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
 import "./interfaces/IKacyAssetManager.sol";
 import "./interfaces/IPoolController.sol";
 import "./lib/KacyErrors.sol";
 
-contract KacyAssetManager is IKacyAssetManager, /*Initializable,*/ Ownable/*, UUPSUpgradeable*/ {
+contract KacyAssetManager is IKacyAssetManager, OwnableUpgradeable {
     /**
      * @dev Only the controller contract is allowed to modify its own pool
      */
@@ -32,6 +31,10 @@ contract KacyAssetManager is IKacyAssetManager, /*Initializable,*/ Ownable/*, UU
         bytes32 requesterVaultPoolId = IManagedPool(IPoolController(msg.sender).pool()).getPoolId();
         _require(vaultPoolId == requesterVaultPoolId, Errors.SENDER_NOT_ALLOWED);
         _;
+    }
+
+    function initialize() public initializer {
+        __Ownable_init();
     }
 
     function addToken(
