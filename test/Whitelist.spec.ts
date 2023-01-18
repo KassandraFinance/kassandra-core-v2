@@ -1,6 +1,7 @@
 import { ethers, upgrades } from 'hardhat';
 import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
 import { expect } from 'chai';
+import { KassandraWhitelist } from '../typechain-types';
 
 describe("Whitelist", () => {
     const DAI_ADDRESS = '0x8f3Cf7ad23Cd3CaDbD9735AFf958023239c6A063';
@@ -18,16 +19,23 @@ describe("Whitelist", () => {
     async function WhitelistDeploy() {
         const [owner, account] = await ethers.getSigners();
         const Whitelist = await ethers.getContractFactory("KassandraWhitelist");
-        const whitelist = await upgrades.deployProxy(Whitelist);
+        const whitelist = await upgrades.deployProxy(Whitelist) as KassandraWhitelist;
         await whitelist.deployed();
 
         return { whitelist, owner, account };
     }
 
+    it("should not allow running the initializer again", async () => {
+        const { whitelist } = await loadFixture(WhitelistDeploy);
+
+        await expect(whitelist.initialize()).revertedWith("Initializable: contract is already initialized");
+    })
+
     it("must not set whitelist if sender is not owner", async () => {
         const { whitelist, account } = await loadFixture(WhitelistDeploy);
 
         await expect(whitelist.connect(account).addTokenToList(DAI_ADDRESS)).to.revertedWith("Ownable: caller is not the owner");
+        await expect(whitelist.connect(account).removeTokenFromList(DAI_ADDRESS)).to.revertedWith("Ownable: caller is not the owner");
     })
 
     it("must not set whitelist if token is zero address", async () => {

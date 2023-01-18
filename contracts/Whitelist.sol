@@ -70,7 +70,6 @@ contract KassandraWhitelist is IWhitelist, OwnableUpgradeable {
     }
 
     function removeTokenFromList(address token) external onlyOwner {
-        require(token != address(0), KacyErrors.ZERO_ADDRESS);
         _require(_tokenList[token] == true, Errors.TOKEN_NOT_REGISTERED);
 
         _tokenList[token] = false;
