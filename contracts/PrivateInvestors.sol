@@ -35,11 +35,18 @@ contract PrivateInvestors is IPrivateInvestors, OwnableUpgradeable {
     }
 
     function setFactory(address factory) external onlyOwner {
+        _require(!_factories[factory], Errors.ADDRESS_ALREADY_ALLOWLISTED);
         _factories[factory] = true;
+    }
+
+    function removeFactory(address factory) external onlyOwner {
+        _require(_factories[factory], Errors.ADDRESS_NOT_ALLOWLISTED);
+        _factories[factory] = false;
     }
 
     function setController(address controller) external override {
         _require(_factories[msg.sender], Errors.SENDER_NOT_ALLOWED);
+        _require(!_controllers[controller], Errors.ADDRESS_ALREADY_ALLOWLISTED);
         _controllers[controller] = true;
     }
 

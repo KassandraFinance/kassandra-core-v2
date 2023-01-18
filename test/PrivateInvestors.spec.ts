@@ -1,6 +1,7 @@
 import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
 import { expect } from 'chai';
 import { ethers, network, upgrades } from 'hardhat';
+import { PrivateInvestors } from '../typechain-types';
 
 describe('PrivateInvestors', () => {
   async function deployPrivateInvestors() {
@@ -15,7 +16,7 @@ describe('PrivateInvestors', () => {
     await ownerPrivateInvestor.sendTransaction({to: OWNER_ADDRESS, value: ethers.utils.parseEther("1") });
 
     const PrivateInvestors = await ethers.getContractFactory('PrivateInvestors');
-    const privateInvestors = await upgrades.deployProxy(PrivateInvestors);
+    const privateInvestors = await upgrades.deployProxy(PrivateInvestors) as PrivateInvestors;
 
     const ManagedPool = await ethers.getContractFactory("ManagedPoolMock");
     const managedPool = await ManagedPool.deploy();
@@ -31,10 +32,22 @@ describe('PrivateInvestors', () => {
     return { privateInvestors, investor, ownerPool, factory, controller, invalidController, managedPool };
   }
 
+  it("should not allow running the initializer again", async () => {
+    const { privateInvestors } = await loadFixture(deployPrivateInvestors);
+
+    await expect(privateInvestors.initialize()).revertedWith("Initializable: contract is already initialized");
+  })
+
   it("should revert setFactory if caller is not the owner", async () => {
     const { privateInvestors, factory } = await loadFixture(deployPrivateInvestors);
 
     await expect(privateInvestors.connect(factory).setFactory(factory.address)).to.revertedWith('Ownable: caller is not the owner');
+  })
+
+  it("should revert removeFactory if caller is not the owner", async () => {
+    const { privateInvestors, factory } = await loadFixture(deployPrivateInvestors);
+
+    await expect(privateInvestors.connect(factory).removeFactory(factory.address)).to.revertedWith('Ownable: caller is not the owner');
   })
 
   it("should revert setController if caller is not an authorized factory", async () => {
@@ -110,5 +123,15 @@ describe('PrivateInvestors', () => {
     await controller.removeAllowedInvestor(investor.address, privateInvestors.address);
 
     expect(await privateInvestors.isInvestorAllowed(managedPool.address, investor.address)).to.false;
+  })
+
+  it("should remove a factory", async () => {
+    const { privateInvestors, factory } = await loadFixture(deployPrivateInvestors);
+    await expect(privateInvestors.removeFactory(factory.address)).not.reverted;
+  })
+
+  it("should revert if factory was not added previously", async () => {
+    const { privateInvestors, controller } = await loadFixture(deployPrivateInvestors);
+    await expect(privateInvestors.removeFactory(controller.address)).revertedWith("BAL#423")
   })
 });
