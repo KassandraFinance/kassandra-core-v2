@@ -101,7 +101,7 @@ contract KassandraControlledManagedPoolFactory {
             tokenIn.safeTransferFrom(msg.sender, thisAddress, amountsIn[i]);
         }
 
-        uint256 size = amountsIn.length + 1;    
+        uint256 size = amountsIn.length + 1;
         IERC20[] memory assetsWithBPT = new IERC20[](size);
         uint256[] memory amountsInWithBPT = new uint256[](size);
         {
@@ -132,7 +132,7 @@ contract KassandraControlledManagedPoolFactory {
 
         _authorizedManagers.managerCreatedPool(msg.sender);
         _privateInvestors.setController(poolControllerAddress);
-        
+
         _isPoolFromFactory[pool] = true;
         emit ManagedPoolCreated(pool, poolControllerAddress);
     }

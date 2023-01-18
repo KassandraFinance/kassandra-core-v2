@@ -32,7 +32,7 @@ contract ManagedPoolMock {
     function setMustAllowlistLPs(bool mustAllowlistLPs) external {
 
     }
-    
+
     function addAllowedAddress(address member) external {
 
     }

@@ -1,7 +1,7 @@
 import { ethers, network, upgrades } from 'hardhat';
 import { expect } from 'chai';
 import { defaultAbiCoder } from '@ethersproject/abi';
-import { AuthorizedManagers, BalancerHelperMock, IVault, KassandraManagedPoolController, ProxyInvest, TokenMock } from '../typechain-types';
+import { AuthorizedManagers, BalancerHelperMock, KassandraManagedPoolController, ProxyInvest, TokenMock } from '../typechain-types';
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 import { ManagedPool } from '../typechain-types/contracts/managed';
 import { BigNumber } from 'ethers';
@@ -21,7 +21,6 @@ describe('ProxyInvest', () => {
   let account: SignerWithAddress;
   let manager: SignerWithAddress;
   let referrer: SignerWithAddress;
-  let vault: IVault;
   let helperBalancer: BalancerHelperMock;
   let poolController: KassandraManagedPoolController;
   let wmatic: TokenMock;
@@ -63,9 +62,7 @@ describe('ProxyInvest', () => {
 
     const signer = await ethers.getSigner(VAULT_ADDRESS);
 
-    vault = await ethers.getContractAt('IVault', VAULT_ADDRESS);
     helperBalancer = await ethers.getContractAt("BalancerHelperMock", BALANCER_HELPER_ADDRESS);
-
 
     const TokenMock = await ethers.getContractFactory('TokenMock', signer);
     wmatic = TokenMock.attach(WMATIC_ADDRESS);
@@ -195,7 +192,7 @@ describe('ProxyInvest', () => {
         .connect(account)
         .joinPool(account.address, referrer.address, poolController.address, request);
 
-      const fees = await poolController.getInvestFees();
+      const fees = await poolController.getJoinFees();
       const amountOut = response.bptOut;
       const amountToManager = amountOut.mul(fees.feesToManager).div(1e18.toString());
       const amountToReferral = amountOut.mul(fees.feesToReferral).div(1e18.toString());
@@ -227,7 +224,7 @@ describe('ProxyInvest', () => {
         .connect(account)
         .joinPool(account.address, referrer.address, poolController.address, request);
 
-      const fees = await poolController.getInvestFees();
+      const fees = await poolController.getJoinFees();
       const amountOut = response.bptOut;
       const amountToManager = amountOut.mul(fees.feesToManager).div(1e18.toString());
       const amountToReferral = amountOut.mul(fees.feesToReferral).div(1e18.toString());
@@ -276,7 +273,7 @@ describe('ProxyInvest', () => {
           data
         );
 
-      const fees = await poolController.getInvestFees();
+      const fees = await poolController.getJoinFees();
       const amountOut = res.amountToManager.add(res.amountToRecipient).add(res.amountToReferrer);
       const amountToManager = amountOut.mul(fees.feesToManager).div(1e18.toString());
       const amountToReferral = amountOut.mul(fees.feesToReferral).div(1e18.toString());

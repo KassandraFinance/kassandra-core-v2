@@ -5,13 +5,11 @@ import { AuthorizedManagers } from "../typechain-types";
 
 describe("AuthorizedManagers", () => {
     let authorizedManagers: AuthorizedManagers;
-    let owner: SignerWithAddress;
     let manager: SignerWithAddress;
-    let manager2: SignerWithAddress;
     let factory: SignerWithAddress;
 
     before(async () => {
-        [owner, manager, manager2, factory] = await ethers.getSigners();
+        [, manager, factory] = await ethers.getSigners();
 
         const AuthorizedManagers = await ethers.getContractFactory("AuthorizedManagers");
         authorizedManagers = await upgrades.deployProxy(AuthorizedManagers, [factory.address]) as AuthorizedManagers;

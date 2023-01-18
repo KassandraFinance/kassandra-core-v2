@@ -31,9 +31,9 @@ abstract contract BalancerHelperMock {
     }
 
     function queryExit(
-        bytes32 poolId, 
-        address sender, 
-        address recipient, 
+        bytes32 poolId,
+        address sender,
+        address recipient,
         ExitPoolRequest calldata request
         )  external virtual returns (uint256 bptIn, uint256[] memory amountsOut);
 

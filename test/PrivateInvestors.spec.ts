@@ -3,8 +3,6 @@ import { expect } from 'chai';
 import { ethers, network, upgrades } from 'hardhat';
 
 describe('PrivateInvestors', () => {
-  const POOL_ADDRESS = '0x8ac5fafe2e52e52f5352aec64b64ff8b305e1d4a';
-
   async function deployPrivateInvestors() {
     const [ownerPrivateInvestor, investor, factory] = await ethers.getSigners();
     const OWNER_ADDRESS = '0xba1ba1ba1ba1ba1ba1ba1ba1ba1ba1ba1ba1ba1b';
