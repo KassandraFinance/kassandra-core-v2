@@ -16,7 +16,7 @@ pragma solidity >=0.7.0 <0.9.0;
 pragma experimental ABIEncoderV2;
 
 import "@balancer-labs/v2-interfaces/contracts/pool-utils/IManagedPool.sol";
-import "@balancer-labs/v2-solidity-utils/contracts/openzeppelin/Ownable.sol";
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
 import "../balancer-v2-submodule/pkg/pool-weighted/contracts/managed/ManagedPool.sol";
 
@@ -24,11 +24,15 @@ import "./interfaces/IPrivateInvestors.sol";
 
 import "./BasePoolController.sol";
 
-contract PrivateInvestors is IPrivateInvestors, Ownable {
+contract PrivateInvestors is IPrivateInvestors, OwnableUpgradeable {
     // pool address -> investor -> bool
     mapping(address => mapping(address => bool)) private _allowedInvestors;
     mapping(address => bool) private _controllers;
     mapping(address => bool) private _factories;
+
+    function initialize() public initializer {
+        __Ownable_init();
+    }
 
     function setFactory(address factory) external onlyOwner {
         _factories[factory] = true;

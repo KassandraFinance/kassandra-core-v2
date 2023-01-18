@@ -1,6 +1,6 @@
 import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
 import { expect } from 'chai';
-import { ethers, network } from 'hardhat';
+import { ethers, network, upgrades } from 'hardhat';
 
 describe('PrivateInvestors', () => {
   const POOL_ADDRESS = '0x8ac5fafe2e52e52f5352aec64b64ff8b305e1d4a';
@@ -8,7 +8,7 @@ describe('PrivateInvestors', () => {
   async function deployPrivateInvestors() {
     const [ownerPrivateInvestor, investor, factory] = await ethers.getSigners();
     const OWNER_ADDRESS = '0xba1ba1ba1ba1ba1ba1ba1ba1ba1ba1ba1ba1ba1b';
-    
+
     await network.provider.request({
       method: 'hardhat_impersonateAccount',
       params: [OWNER_ADDRESS],
@@ -17,16 +17,15 @@ describe('PrivateInvestors', () => {
     await ownerPrivateInvestor.sendTransaction({to: OWNER_ADDRESS, value: ethers.utils.parseEther("1") });
 
     const PrivateInvestors = await ethers.getContractFactory('PrivateInvestors');
-    const privateInvestors = await PrivateInvestors.deploy();
-    
-    
+    const privateInvestors = await upgrades.deployProxy(PrivateInvestors);
+
     const ManagedPool = await ethers.getContractFactory("ManagedPoolMock");
     const managedPool = await ManagedPool.deploy();
-    
+
     const BaseControllerMock = await ethers.getContractFactory("BaseControllerMock");
     const controller = await BaseControllerMock.deploy(managedPool.address);
     const invalidController = await BaseControllerMock.deploy(managedPool.address);
-    
+
     await managedPool.setOwner(controller.address);
 
     await privateInvestors.setFactory(factory.address);
@@ -37,7 +36,7 @@ describe('PrivateInvestors', () => {
   it("should revert setFactory if caller is not the owner", async () => {
     const { privateInvestors, factory } = await loadFixture(deployPrivateInvestors);
 
-    await expect(privateInvestors.connect(factory).setFactory(factory.address)).to.revertedWith('BAL#426');
+    await expect(privateInvestors.connect(factory).setFactory(factory.address)).to.revertedWith('Ownable: caller is not the owner');
   })
 
   it("should revert setController if caller is not an authorized factory", async () => {
@@ -77,7 +76,7 @@ describe('PrivateInvestors', () => {
     await privateInvestors.connect(factory).setController(controller.address);
 
     await controller.addAllowedInvestor(investor.address, privateInvestors.address);
-    
+
     expect(await privateInvestors.isInvestorAllowed(managedPool.address, investor.address)).to.true;
   })
 
@@ -111,7 +110,7 @@ describe('PrivateInvestors', () => {
     await controller.addAllowedInvestor(investor.address, privateInvestors.address);
 
     await controller.removeAllowedInvestor(investor.address, privateInvestors.address);
-    
+
     expect(await privateInvestors.isInvestorAllowed(managedPool.address, investor.address)).to.false;
   })
 });
