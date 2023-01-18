@@ -15,15 +15,13 @@
 pragma solidity ^0.7.0;
 pragma experimental ABIEncoderV2;
 
-import "@balancer-labs/v2-solidity-utils/contracts/openzeppelin/Ownable.sol";
-// import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-// import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/Initializable.sol";
 
 import "./interfaces/IKassandraRules.sol";
 import "./lib/KacyErrors.sol";
 
-contract KassandraRules is IKassandraRules, /*Initializable,*/ Ownable/*, UUPSUpgradeable*/ {
-    address internal _upgrader;
+contract KassandraRules is IKassandraRules, Initializable, OwnableUpgradeable {
     address internal _addressKCUPE;
     uint256 internal _maxWeightChangePerSecond;
     uint256 internal _minWeightChangeDuration;
@@ -39,7 +37,8 @@ contract KassandraRules is IKassandraRules, /*Initializable,*/ Ownable/*, UUPSUp
         address addressKCUPE,
         uint256 maximumWeightChangePerSecond,
         uint256 minimumWeightChangeDuration
-     ) external /*initializer*/ {
+     ) external initializer {
+        __Ownable_init();
         _addressKCUPE = addressKCUPE;
         _maxWeightChangePerSecond = maximumWeightChangePerSecond;
         _minWeightChangeDuration = minimumWeightChangeDuration;

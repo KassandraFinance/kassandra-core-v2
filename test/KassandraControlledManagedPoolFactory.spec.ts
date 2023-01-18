@@ -2,7 +2,7 @@ import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { expect } from "chai";
 import { BigNumber } from "ethers";
 import { defaultAbiCoder } from "ethers/lib/utils";
-import { ethers, network } from "hardhat";
+import { ethers, network, upgrades } from "hardhat";
 import { AuthorizedManagers, BalancerHelperMock, KassandraControlledManagedPoolFactory, KassandraManagedPoolController, KassandraManagedPoolController__factory, KassandraWhitelist, ManagedPool, TokenMock } from "../typechain-types";
 
 describe("KassandraControlledManagedPoolFactory", () => {
@@ -46,13 +46,10 @@ describe("KassandraControlledManagedPoolFactory", () => {
         feesToReferral: 0.015e18.toString()
     }
 
-    let Pool;
     let pool: ManagedPool;
     let newController: KassandraManagedPoolController;
-    let poolAddress: string;
 
     before(async () => {
-        Pool = await ethers.getContractFactory("ERC20");
         balancerHelper = await ethers.getContractAt("BalancerHelperMock", BALANCER_HELPER_ADDRESS);
 
         [owner, referral, manager, investor] = await ethers.getSigners();
@@ -75,19 +72,19 @@ describe("KassandraControlledManagedPoolFactory", () => {
         maxAmountsIn = [ethers.utils.parseEther('10'), ethers.utils.parseEther('8.4')];
 
         const PrivateInvestors = await ethers.getContractFactory("PrivateInvestors");
-        const privateInvestors = await PrivateInvestors.deploy();
+        const privateInvestors = await upgrades.deployProxy(PrivateInvestors);
         await privateInvestors.deployed();
 
         const Whitelist = await ethers.getContractFactory("KassandraWhitelist");
-        whitelist = await Whitelist.deploy();
+        whitelist = await upgrades.deployProxy(Whitelist) as KassandraWhitelist;
         await whitelist.addTokenToList(WMATIC_ADDRESS);
-        
+
 
         const KassandraRules = await ethers.getContractFactory("KassandraRules");
-        const kassandraRules = await KassandraRules.deploy();
+        const kassandraRules = await upgrades.deployProxy(KassandraRules, [ethers.constants.AddressZero, 0, 0]);
 
         const AuthorizedManagers = await ethers.getContractFactory("AuthorizedManagers");
-        authorizedManagers = await AuthorizedManagers.deploy(ethers.constants.AddressZero);
+        authorizedManagers = await upgrades.deployProxy(AuthorizedManagers, [ethers.constants.AddressZero]) as AuthorizedManagers;
         await authorizedManagers.deployed();
 
         const CircuitBreakerLib = await (await ethers.getContractFactory("CircuitBreakerLib")).deploy();

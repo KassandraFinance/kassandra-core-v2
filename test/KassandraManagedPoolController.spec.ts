@@ -1,7 +1,7 @@
 import { time } from "@nomicfoundation/hardhat-network-helpers"
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { expect } from "chai"
-import { ethers } from "hardhat"
+import { ethers, upgrades } from "hardhat"
 import { PrivateInvestors, KassandraManagedPoolController, ManagedPoolMock } from "../typechain-types";
 
 describe("KassandraManagedPoolController", () => {
@@ -18,7 +18,7 @@ describe("KassandraManagedPoolController", () => {
         [owner, manager, investor] = await ethers.getSigners();
 
         const PrivateInvestors = await ethers.getContractFactory("PrivateInvestors");
-        privateInvestors = await PrivateInvestors.deploy();
+        privateInvestors = await upgrades.deployProxy(PrivateInvestors) as PrivateInvestors;
         await privateInvestors.deployed();
         await privateInvestors.setFactory(owner.address);
 
@@ -32,14 +32,12 @@ describe("KassandraManagedPoolController", () => {
             canUpdateMetadata: true,
         }
 
-        const KassandraRules = await ethers.getContractFactory("KassandraRules");
-        const kassandraRules = await KassandraRules.deploy();
         const minWeightChangeDuration = time.duration.days(1);
-        await kassandraRules.setMinWeightChangeDuration(minWeightChangeDuration);
+        const KassandraRules = await ethers.getContractFactory("KassandraRules");
+        const kassandraRules = await upgrades.deployProxy(KassandraRules, [ethers.constants.AddressZero, 1000, minWeightChangeDuration]);
 
         const Whitelist = await ethers.getContractFactory("KassandraWhitelist");
-        const whitelist = await Whitelist.deploy();
-
+        const whitelist = await upgrades.deployProxy(Whitelist);
 
         const KassandraManagedPoolController = await ethers.getContractFactory("KassandraManagedPoolController");
         kassandraManagedPoolController = await KassandraManagedPoolController.deploy(
