@@ -1,4 +1,4 @@
-import { ethers } from 'hardhat';
+import { ethers, upgrades } from 'hardhat';
 import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
 import { expect } from 'chai';
 
@@ -6,8 +6,8 @@ describe("Whitelist", () => {
     const DAI_ADDRESS = '0x8f3Cf7ad23Cd3CaDbD9735AFf958023239c6A063';
     const ANY_ADDRESS = '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee'
     const tokens = [
-        '0xBA12222222228d8Ba445958a75a0704d566BF2C8', 
-        '0x239e55F427D44C3cc793f49bFB507ebe76638a2b', 
+        '0xBA12222222228d8Ba445958a75a0704d566BF2C8',
+        '0x239e55F427D44C3cc793f49bFB507ebe76638a2b',
         '0x8aC5FAfE2E52e52f5352Aec64B64FF8B305E1D4A',
         '0x2934b36ca9A4B31E633C5BE670C8C8b28b6aA015',
         '0x3A58a54C066FdC0f2D55FC9C89F0415C92eBf3C4',
@@ -17,10 +17,9 @@ describe("Whitelist", () => {
 
     async function WhitelistDeploy() {
         const [owner, account] = await ethers.getSigners();
-
         const Whitelist = await ethers.getContractFactory("KassandraWhitelist");
-        const whitelist = await Whitelist.deploy();
-        whitelist.deployed();
+        const whitelist = await upgrades.deployProxy(Whitelist);
+        await whitelist.deployed();
 
         return { whitelist, owner, account };
     }
@@ -28,7 +27,7 @@ describe("Whitelist", () => {
     it("must not set whitelist if sender is not owner", async () => {
         const { whitelist, account } = await loadFixture(WhitelistDeploy);
 
-        await expect(whitelist.connect(account).addTokenToList(DAI_ADDRESS)).to.revertedWith("BAL#426");
+        await expect(whitelist.connect(account).addTokenToList(DAI_ADDRESS)).to.revertedWith("Ownable: caller is not the owner");
     })
 
     it("must not set whitelist if token is zero address", async () => {
@@ -39,9 +38,9 @@ describe("Whitelist", () => {
 
     it("should add token to whitelist", async () => {
         const { whitelist } = await loadFixture(WhitelistDeploy);
-        
+
         await whitelist.addTokenToList(DAI_ADDRESS);
-        
+
         expect(await whitelist.isTokenWhitelisted(DAI_ADDRESS)).true
         expect(await whitelist.getTokens(0, 1)).deep.equal([DAI_ADDRESS]);
     })
@@ -49,9 +48,9 @@ describe("Whitelist", () => {
     it("should remove token to whitelist", async () => {
         const { whitelist, account } = await loadFixture(WhitelistDeploy);
         await whitelist.addTokenToList(DAI_ADDRESS);
-        
+
         await whitelist.removeTokenFromList(DAI_ADDRESS);
-        
+
         expect(await whitelist.connect(account).isTokenWhitelisted(DAI_ADDRESS)).false
         expect(await whitelist.getTokens(0, 1)).deep.equal([]);
     })
@@ -59,7 +58,7 @@ describe("Whitelist", () => {
     it("should revert if token has already been add", async () => {
         const { whitelist } = await loadFixture(WhitelistDeploy);
         await whitelist.addTokenToList(DAI_ADDRESS);
-        
+
         await expect(whitelist.addTokenToList(DAI_ADDRESS)).to.revertedWith("BAL#522");
     })
 

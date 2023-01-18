@@ -15,12 +15,13 @@
 pragma solidity >=0.7.0 <0.9.0;
 pragma experimental ABIEncoderV2;
 
-import "@balancer-labs/v2-solidity-utils/contracts/openzeppelin/Ownable.sol";
+import "@balancer-labs/v2-interfaces/contracts/solidity-utils/helpers/BalancerErrors.sol";
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
 import "./interfaces/IWhitelist.sol";
 import "./lib/KacyErrors.sol";
 
-contract KassandraWhitelist is IWhitelist, Ownable {
+contract KassandraWhitelist is IWhitelist, OwnableUpgradeable {
     bool internal constant _IS_BLACKLIST = false;
 
     address[] private _tokens;
@@ -29,6 +30,10 @@ contract KassandraWhitelist is IWhitelist, Ownable {
 
     event TokenAdded(address indexed token);
     event TokenRemoved(address indexed token);
+
+    function initialize() public initializer {
+        __Ownable_init();
+    }
 
     function isTokenWhitelisted(address token) external view override returns (bool) {
         return _tokenList[token];
