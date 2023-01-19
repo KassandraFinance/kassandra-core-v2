@@ -156,6 +156,17 @@ describe("KassandraControlledManagedPoolFactory", () => {
         )).to.be.revertedWith("BAL#309");
     })
 
+    it("should revert if fees exceeds maximum invest fees", async () => {
+        await expect(controllerManagedFactory.connect(manager).create(
+            managedPoolParams,
+            settingsParams,
+            { feesToManager: 0.8e18.toString(), feesToReferral: 0.8e18.toString() },
+            whitelist.address,
+            maxAmountsIn,
+            true,
+        )).to.be.revertedWith("BAL#202");
+    })
+
     it("should create pool and controller", async () => {
         await whitelist.addTokenToList(DAI_ADDRESS);
         const response = await controllerManagedFactory.connect(manager).callStatic.create(

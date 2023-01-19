@@ -41,9 +41,11 @@ contract KassandraManagedPoolController is BasePoolController {
     using SafeERC20 for IERC20;
     using WordCodec for bytes32;
     using FixedPoint for uint256;
+    using FixedPoint for uint64;
 
-    uint256 constant internal _TOKEN_IN_FOR_EXACT_BPT_OUT = 2;
-    uint256 constant internal _ALL_TOKENS_IN_FOR_EXACT_BPT_OUT = 3;
+    uint256 internal constant _TOKEN_IN_FOR_EXACT_BPT_OUT = 2;
+    uint256 internal constant _ALL_TOKENS_IN_FOR_EXACT_BPT_OUT = 3;
+    uint256 internal constant _MAX_INVEST_FEES = 950000000000000000;
 
     struct FeesPercentages {
         uint64 feesToManager;
@@ -77,6 +79,10 @@ contract KassandraManagedPoolController is BasePoolController {
         address assetManager,
         IWhitelist whitelist
     ) BasePoolController(encodePermissions(baseRights), manager) {
+        _require(
+            feesPercentages.feesToManager.add(feesPercentages.feesToReferral) < _MAX_INVEST_FEES,
+            Errors.MAX_SWAP_FEE_PERCENTAGE
+        );
         _kassandraRules = IKassandraRules(kassandraRules);
         _privateInvestors = privateInvestors;
         _isPrivatePool = isPrivatePool;
@@ -152,12 +158,12 @@ contract KassandraManagedPoolController is BasePoolController {
         }
 
         _vault.joinPool(poolId, address(this), address(this), request);
-        
+
         uint256 amountOutBPT = poolToken.balanceOf(address(this)).sub(initialPoolAmount);
         amountToManager = amountOutBPT.mulDown(_feesPercentages.feesToManager);
         amountToReferrer = amountOutBPT.mulDown(_feesPercentages.feesToReferral);
         amountToRecipient = amountOutBPT.sub(amountToManager).sub(amountToReferrer);
-        
+
         _require(amountToRecipient >= minBPTAmountOut, Errors.BPT_OUT_MIN_AMOUNT);
 
         address _manager = getManager();
@@ -191,7 +197,7 @@ contract KassandraManagedPoolController is BasePoolController {
         uint256 bptAmount = amountToRecipient.divDown(
             FixedPoint.ONE.sub(_feesPercentages.feesToManager).sub(_feesPercentages.feesToReferral)
         );
-        
+
         uint256 indexTokenIn = indexToken + 1;
         IERC20 tokenIn = IERC20(address(request.assets[indexTokenIn]));
         if (tokenIn.allowance(address(this), address(_vault)) < request.maxAmountsIn[indexTokenIn]) {
@@ -362,8 +368,8 @@ contract KassandraManagedPoolController is BasePoolController {
         for (uint256 i = 0; i < startWeights.length; i++) {
             _require(
                 startWeights[i] > endWeights[i]
-                ? (startWeights[i] - endWeights[i]) / timedelta < maxWeightChangePerSecond
-                : (endWeights[i] - startWeights[i]) / timedelta < maxWeightChangePerSecond,
+                    ? (startWeights[i] - endWeights[i]) / timedelta < maxWeightChangePerSecond
+                    : (endWeights[i] - startWeights[i]) / timedelta < maxWeightChangePerSecond,
                 Errors.WEIGHT_CHANGE_TOO_FAST
             );
         }
