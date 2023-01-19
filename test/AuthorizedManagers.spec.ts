@@ -1,6 +1,6 @@
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { expect } from "chai";
-import { ethers } from "hardhat";
+import { ethers, upgrades } from "hardhat";
 import { AuthorizedManagers } from "../typechain-types";
 
 describe("AuthorizedManagers", () => {
@@ -14,12 +14,12 @@ describe("AuthorizedManagers", () => {
         [owner, manager, manager2, factory] = await ethers.getSigners();
 
         const AuthorizedManagers = await ethers.getContractFactory("AuthorizedManagers");
-        authorizedManagers = await AuthorizedManagers.deploy(factory.address);
+        authorizedManagers = await upgrades.deployProxy(AuthorizedManagers, [factory.address]) as AuthorizedManagers;
         await authorizedManagers.deployed();
     })
 
     it("should revert if caller is not the owner", async () => {
-        await expect(authorizedManagers.connect(manager).setManager(manager.address, 10)).to.revertedWith("BAL#426");
+        await expect(authorizedManagers.connect(manager).setManager(manager.address, 10)).to.revertedWith("Ownable: caller is not the owner");
     })
 
     it("should revert if manager is equal zero address", async () => {
@@ -35,7 +35,7 @@ describe("AuthorizedManagers", () => {
     it("should return the amount of pools the manager can create", async () => {
         expect(await authorizedManagers.getAllowedPoolsToCreate(manager.address)).to.equal(2);
     })
-    
+
     it("should revert if msg.sender is not the Kassandra factory", async () => {
         await expect(authorizedManagers.managerCreatedPool(manager.address)).to.revertedWith("BAL#401");
     })

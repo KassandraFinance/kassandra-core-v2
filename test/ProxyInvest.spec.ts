@@ -1,7 +1,7 @@
-import { ethers, network } from 'hardhat';
+import { ethers, network, upgrades } from 'hardhat';
 import { expect } from 'chai';
 import { defaultAbiCoder } from '@ethersproject/abi';
-import { BalancerHelperMock, IVault, KassandraManagedPoolController, ProxyInvest, TokenMock } from '../typechain-types';
+import { AuthorizedManagers, BalancerHelperMock, IVault, KassandraManagedPoolController, ProxyInvest, TokenMock } from '../typechain-types';
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 import { ManagedPool } from '../typechain-types/contracts/managed';
 import { BigNumber } from 'ethers';
@@ -89,7 +89,7 @@ describe('ProxyInvest', () => {
     const KassandraRules = await ethers.getContractFactory("KassandraRules");
     const kassandraRules = await KassandraRules.deploy();
     const AuthorizedManagers = await ethers.getContractFactory("AuthorizedManagers");
-    const authorizedManagers = await AuthorizedManagers.deploy(ethers.constants.AddressZero);
+    const authorizedManagers = await upgrades.deployProxy(AuthorizedManagers, [ethers.constants.AddressZero]) as AuthorizedManagers;
     await authorizedManagers.deployed();
     const PrivateInvestors = await ethers.getContractFactory("PrivateInvestors");
     const privateInvestors = await PrivateInvestors.deploy();

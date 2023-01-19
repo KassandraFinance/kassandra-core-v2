@@ -15,16 +15,18 @@
 pragma solidity >=0.7.0 <0.9.0;
 pragma experimental ABIEncoderV2;
 
-import "@balancer-labs/v2-solidity-utils/contracts/openzeppelin/Ownable.sol";
+import "@balancer-labs/v2-interfaces/contracts/solidity-utils/helpers/BalancerErrors.sol";
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
 import "./interfaces/IAuthorizedManagers.sol";
 import "./lib/KacyErrors.sol";
 
-contract AuthorizedManagers is IAuthorizedManagers, Ownable {
+contract AuthorizedManagers is IAuthorizedManagers, OwnableUpgradeable {
     address private _factory;
     mapping(address => uint8) private _manager;
 
-    constructor(address factory) {
+    function initialize(address factory) public initializer {
+        __Ownable_init();
         _factory = factory;
     }
 
