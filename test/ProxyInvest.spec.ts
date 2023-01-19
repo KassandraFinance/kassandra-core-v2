@@ -80,16 +80,16 @@ describe('ProxyInvest', () => {
     await dai.connect(account).approve(proxyInvest.address, ethers.constants.MaxUint256);
 
     const Whitelist = await ethers.getContractFactory("KassandraWhitelist");
-    const whitelist = await Whitelist.deploy();
+    const whitelist = await upgrades.deployProxy(Whitelist);
     await whitelist.addTokenToList(WMATIC_ADDRESS);
     await whitelist.addTokenToList(DAI_ADDRESS);
     const KassandraRules = await ethers.getContractFactory("KassandraRules");
-    const kassandraRules = await KassandraRules.deploy();
+    const kassandraRules = await upgrades.deployProxy(KassandraRules, [ethers.constants.AddressZero, 0, 0]);
     const AuthorizedManagers = await ethers.getContractFactory("AuthorizedManagers");
     const authorizedManagers = await upgrades.deployProxy(AuthorizedManagers, [ethers.constants.AddressZero]) as AuthorizedManagers;
     await authorizedManagers.deployed();
     const PrivateInvestors = await ethers.getContractFactory("PrivateInvestors");
-    const privateInvestors = await PrivateInvestors.deploy();
+    const privateInvestors = await upgrades.deployProxy(PrivateInvestors);
     await privateInvestors.deployed();
     const CircuitBreakerLib = await (await ethers.getContractFactory("CircuitBreakerLib")).deploy();
     const ManagedPoolAddRemoveTokenLib = await (await ethers.getContractFactory("ManagedPoolAddRemoveTokenLib")).deploy();
@@ -121,21 +121,23 @@ describe('ProxyInvest', () => {
     await wmatic.connect(manager).approve(controllerManagedFactory.address, await wmatic.balanceOf(manager.address));
     await dai.connect(manager).approve(controllerManagedFactory.address, await dai.balanceOf(manager.address));
     const response = await controllerManagedFactory.connect(manager).callStatic.create(
-      managedPoolParams,
-      settingsParams,
-      feesSettings,
+      managedPoolParams.name,
+      managedPoolParams.symbol,
+      false,
       whitelist.address,
       maxAmountsIn,
-      false
+      settingsParams,
+      feesSettings,
     )
 
     await controllerManagedFactory.connect(manager).create(
-      managedPoolParams,
-      settingsParams,
-      feesSettings,
+      managedPoolParams.name,
+      managedPoolParams.symbol,
+      false,
       whitelist.address,
       maxAmountsIn,
-      false
+      settingsParams,
+      feesSettings,
     )
 
     pool = await ethers.getContractAt("ManagedPool", response.pool);

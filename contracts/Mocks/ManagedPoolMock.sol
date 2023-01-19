@@ -17,6 +17,10 @@ pragma solidity >=0.7.0 <0.9.0;
 contract ManagedPoolMock {
     address private _owner;
 
+    constructor(address owner) {
+        _owner = owner;
+    }
+
     function setOwner(address owner) external {
         _owner = owner;
     }
@@ -26,7 +30,7 @@ contract ManagedPoolMock {
     }
 
     function getPoolId() external pure returns (bytes32) {
-        return bytes32("0x");
+        return bytes32("KassandraMockedPool");
     }
 
     function setMustAllowlistLPs(bool mustAllowlistLPs) external {

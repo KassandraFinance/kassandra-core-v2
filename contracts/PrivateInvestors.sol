@@ -27,7 +27,7 @@ import "./BasePoolController.sol";
 contract PrivateInvestors is IPrivateInvestors, OwnableUpgradeable {
     // pool address -> investor -> bool
     mapping(address => mapping(address => bool)) private _allowedInvestors;
-    mapping(address => bool) private _controllers;
+    mapping(address => bool) internal _controllers;
     mapping(address => bool) private _factories;
 
     function initialize() public initializer {

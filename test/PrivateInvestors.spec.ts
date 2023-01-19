@@ -19,7 +19,7 @@ describe('PrivateInvestors', () => {
     const privateInvestors = await upgrades.deployProxy(PrivateInvestors) as PrivateInvestors;
 
     const ManagedPool = await ethers.getContractFactory("ManagedPoolMock");
-    const managedPool = await ManagedPool.deploy();
+    const managedPool = await ManagedPool.deploy(ownerPrivateInvestor.address);
 
     const BaseControllerMock = await ethers.getContractFactory("BaseControllerMock");
     const controller = await BaseControllerMock.deploy(managedPool.address);
@@ -132,6 +132,6 @@ describe('PrivateInvestors', () => {
 
   it("should revert if factory was not added previously", async () => {
     const { privateInvestors, controller } = await loadFixture(deployPrivateInvestors);
-    await expect(privateInvestors.removeFactory(controller.address)).revertedWith("BAL#423")
+    await expect(privateInvestors.removeFactory(controller.address)).revertedWith("BAL#433")
   })
 });
