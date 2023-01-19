@@ -19,9 +19,10 @@ import "@balancer-labs/v2-solidity-utils/contracts/openzeppelin/Ownable.sol";
 import "../balancer-v2-submodule/pkg/pool-weighted/contracts/managed/ManagedPoolFactory.sol";
 import "../balancer-v2-submodule/pkg/pool-weighted/contracts/managed/ManagedPool.sol";
 
-import "./KassandraManagedPoolController.sol";
-
 import "./interfaces/IAuthorizedManagers.sol";
+import "./lib/KacyErrors.sol";
+
+import "./KassandraManagedPoolController.sol";
 
 /**
  * @dev Deploys a new `ManagedPool` owned by a ManagedPoolController with the specified rights.
@@ -61,17 +62,16 @@ contract KassandraControlledManagedPoolFactory is Ownable {
      * @dev Deploys a new `ManagedPool`.
      */
     function create(
-        ManagedPool.ManagedPoolParams memory params,
-        ManagedPoolSettings.ManagedPoolSettingsParams memory settingsParams,
-        KassandraManagedPoolController.FeesPercentages memory feesSettings,
+        string memory name,
+        string memory symbol,
+        bool isPrivatePool,
         IWhitelist whitelist,
         uint256[] memory amountsIn,
-        bool isPrivatePool
+        ManagedPoolSettings.ManagedPoolSettingsParams memory settingsParams,
+        KassandraManagedPoolController.FeesPercentages memory feesSettings
     ) external returns (address pool, KassandraManagedPoolController poolController) {
         _require(authorizedManagers.canCreatePool(msg.sender), Errors.SENDER_NOT_ALLOWED);
         _require(amountsIn.length == settingsParams.tokens.length, Errors.INPUT_LENGTH_MISMATCH);
-
-        settingsParams.mustAllowlistLPs = false;
 
         poolController = new KassandraManagedPoolController(
             BasePoolController.BasePoolRights({
@@ -89,18 +89,21 @@ contract KassandraControlledManagedPoolFactory is Ownable {
             whitelist
         );
 
-        address poolControllerAddress = address(poolController);
-        address vaultAddress = address(_vault);
-        address thisAddress = address(this);
+        settingsParams.mustAllowlistLPs = false;
 
         for (uint256 i = 0; i < amountsIn.length; i++) {
             IERC20 tokenIn = IERC20(settingsParams.tokens[i]);
             _require(whitelist.isTokenWhitelisted(address(tokenIn)), Errors.INVALID_TOKEN);
-            if (tokenIn.allowance(thisAddress, vaultAddress) < amountsIn[i]) {
-                tokenIn.safeApprove(vaultAddress, type(uint256).max);
+            if (tokenIn.allowance(address(this), address(_vault)) < amountsIn[i]) {
+                tokenIn.safeApprove(address(_vault), type(uint256).max);
             }
-            tokenIn.safeTransferFrom(msg.sender, thisAddress, amountsIn[i]);
+            tokenIn.safeTransferFrom(msg.sender, address(this), amountsIn[i]);
         }
+
+        ManagedPool.ManagedPoolParams memory params;
+        params.name = name;
+        params.symbol = symbol;
+        params.assetManagers = new address[](amountsIn.length);
 
         uint256 size = amountsIn.length + 1;
         IERC20[] memory assetsWithBPT = new IERC20[](size);
@@ -110,12 +113,13 @@ contract KassandraControlledManagedPoolFactory is Ownable {
             for (uint256 i = 0; i < amountsIn.length; i++) {
                 assetsWithBPT[j] = settingsParams.tokens[i];
                 amountsInWithBPT[j] = amountsIn[i];
+                params.assetManagers[i] = assetManager;
                 j++;
             }
         }
 
         // Let the base factory deploy the pool (owner is the controller)
-        pool = ManagedPoolFactory(managedPoolFactory).create(params, settingsParams, poolControllerAddress);
+        pool = ManagedPoolFactory(managedPoolFactory).create(params, settingsParams, address(poolController));
         assetsWithBPT[0] = IERC20(pool);
         amountsInWithBPT[0] = type(uint256).max;
 
@@ -126,16 +130,16 @@ contract KassandraControlledManagedPoolFactory is Ownable {
             fromInternalBalance: false
         });
 
-        _vault.joinPool(IManagedPool(pool).getPoolId(), thisAddress, msg.sender, request);
+        _vault.joinPool(IManagedPool(pool).getPoolId(), address(this), msg.sender, request);
 
         // Finally, initialize the controller
         poolController.initialize(pool);
 
-        _authorizedManagers.managerCreatedPool(msg.sender);
-        _privateInvestors.setController(poolControllerAddress);
+        authorizedManagers.managerCreatedPool(msg.sender);
+        _privateInvestors.setController(address(poolController));
 
         _isPoolFromFactory[pool] = true;
-        emit ManagedPoolCreated(pool, poolControllerAddress);
+        emit ManagedPoolCreated(pool, address(poolController));
     }
 
     /**
