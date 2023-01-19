@@ -15,6 +15,7 @@
 pragma solidity ^0.7.0;
 pragma experimental ABIEncoderV2;
 
+import "@balancer-labs/v2-solidity-utils/contracts/openzeppelin/Ownable.sol";
 import "../balancer-v2-submodule/pkg/pool-weighted/contracts/managed/ManagedPoolFactory.sol";
 import "../balancer-v2-submodule/pkg/pool-weighted/contracts/managed/ManagedPool.sol";
 
@@ -26,7 +27,7 @@ import "./interfaces/IAuthorizedManagers.sol";
  * @dev Deploys a new `ManagedPool` owned by a ManagedPoolController with the specified rights.
  * It uses the ManagedPoolFactory to deploy the pool.
  */
-contract KassandraControlledManagedPoolFactory {
+contract KassandraControlledManagedPoolFactory is Ownable {
     using SafeERC20 for IERC20;
 
     // The address of the ManagedPoolFactory used to deploy the ManagedPool
@@ -34,8 +35,8 @@ contract KassandraControlledManagedPoolFactory {
     address public immutable kassandraRules;
     address public immutable assetManager;
     IVault private immutable _vault;
-    IAuthorizedManagers private immutable _authorizedManagers;
     IPrivateInvestors private immutable _privateInvestors;
+    IAuthorizedManagers public authorizedManagers;
     mapping(address => bool) private _isPoolFromFactory;
 
     event ManagedPoolCreated(address indexed pool, address indexed poolController);
@@ -43,7 +44,7 @@ contract KassandraControlledManagedPoolFactory {
     constructor(
         address factory,
         IPrivateInvestors privateInvestors,
-        IAuthorizedManagers authorizedManagers,
+        IAuthorizedManagers authorizationContract,
         IVault vault,
         address rules,
         address assetManagerAddress
@@ -52,7 +53,7 @@ contract KassandraControlledManagedPoolFactory {
         kassandraRules = rules;
         assetManager = assetManagerAddress;
         _vault = vault;
-        _authorizedManagers = authorizedManagers;
+        authorizedManagers = authorizationContract;
         _privateInvestors = privateInvestors;
     }
 
@@ -67,7 +68,7 @@ contract KassandraControlledManagedPoolFactory {
         uint256[] memory amountsIn,
         bool isPrivatePool
     ) external returns (address pool, KassandraManagedPoolController poolController) {
-        _require(_authorizedManagers.canCreatePool(msg.sender), Errors.SENDER_NOT_ALLOWED);
+        _require(authorizedManagers.canCreatePool(msg.sender), Errors.SENDER_NOT_ALLOWED);
         _require(amountsIn.length == settingsParams.tokens.length, Errors.INPUT_LENGTH_MISMATCH);
 
         settingsParams.mustAllowlistLPs = false;
@@ -142,5 +143,9 @@ contract KassandraControlledManagedPoolFactory {
      */
     function isPoolFromFactory(address pool) external view returns (bool) {
         return _isPoolFromFactory[pool];
+    }
+
+    function setAuthorizedManagers(IAuthorizedManagers authorizationContract) external onlyOwner {
+        authorizedManagers = authorizationContract;
     }
 }
