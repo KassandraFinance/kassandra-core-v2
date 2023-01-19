@@ -218,8 +218,8 @@ describe("KassandraControlledManagedPoolFactory", () => {
             fromInternalBalance: false
         }
         const response = await balancerHelper.callStatic.queryJoin(poolId, newController.address, newController.address, request);
-        request.userData = defaultAbiCoder.encode(['uint256', 'uint256[]', 'uint256'], [EXACT_TOKENS_IN_FOR_BPT_OUT, amounts, response.bptOut]);
-
+        const res = await newController.connect(investor).callStatic.joinPool(investor.address, referral.address, request);
+        request.userData = defaultAbiCoder.encode(['uint256', 'uint256[]', 'uint256'], [EXACT_TOKENS_IN_FOR_BPT_OUT, amounts, res.amountToRecipient]);
         await newController.connect(investor).joinPool(investor.address, referral.address, request);
 
         const fees = await newController.getInvestFees();

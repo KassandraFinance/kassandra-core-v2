@@ -139,6 +139,7 @@ contract KassandraManagedPoolController is BasePoolController {
             uint256[] memory amountsIn
         )
     {
+        (, , uint256 minBPTAmountOut) = abi.decode(request.userData, (uint256, uint256[], uint256));
         IERC20 poolToken = IERC20(pool);
         uint256 initialPoolAmount = poolToken.balanceOf(address(this));
         for (uint256 i = 1; i < request.assets.length; i++) {
@@ -150,14 +151,15 @@ contract KassandraManagedPoolController is BasePoolController {
         }
 
         _vault.joinPool(poolId, address(this), address(this), request);
-
+        
         uint256 amountOutBPT = poolToken.balanceOf(address(this)).sub(initialPoolAmount);
         amountToManager = amountOutBPT.mulDown(_feesPercentages.feesToManager);
         amountToReferrer = amountOutBPT.mulDown(_feesPercentages.feesToReferral);
         amountToRecipient = amountOutBPT.sub(amountToManager).sub(amountToReferrer);
+        
+        _require(amountToRecipient >= minBPTAmountOut, Errors.BPT_OUT_MIN_AMOUNT);
 
         address _manager = getManager();
-
         if (referrer == address(0)) {
             referrer = _manager;
         }

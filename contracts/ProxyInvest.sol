@@ -20,14 +20,27 @@ import "@balancer-labs/v2-interfaces/contracts/solidity-utils/openzeppelin/IERC2
 import "@balancer-labs/v2-solidity-utils/contracts/openzeppelin/Ownable.sol";
 import "@balancer-labs/v2-solidity-utils/contracts/openzeppelin/SafeERC20.sol";
 import "@balancer-labs/v2-solidity-utils/contracts/helpers/ERC20Helpers.sol";
+import "@balancer-labs/v2-interfaces/contracts/pool-utils/IManagedPool.sol";
+
+import "./interfaces/IKassandraManagedPoolController.sol";
 
 contract ProxyInvest is Ownable {
     using SafeERC20 for IERC20;
 
-    uint8 public constant EXACT_TOKENS_IN_FOR_BPT_OUT = 1; 
-    
+    uint8 public constant EXACT_TOKENS_IN_FOR_BPT_OUT = 1;
+
     IVault private _vault;
     address private _swapProvider;
+
+    struct ProxyParams {
+        address recipient;
+        address referrer;
+        address controller;
+        IERC20 tokenIn;
+        uint256 tokenAmountIn;
+        IERC20 tokenExchange;
+        uint256 minTokenAmountOut;
+    }
 
     constructor(IVault vault, address swapProvider) {
         _vault = vault;
@@ -51,75 +64,87 @@ contract ProxyInvest is Ownable {
     }
 
     function joinPoolExactTokenInWithSwap(
-        bytes32 poolId,
-        IERC20 tokenIn,
-        uint256 tokenAmountIn,
-        IERC20 tokenExchange,
-        uint256 minTokenAmountOut,
+        ProxyParams calldata params,
         bytes calldata data
-    ) external payable {
-        if(msg.value == 0) {
-            tokenIn.safeTransferFrom(msg.sender, address(this), tokenAmountIn);
-            if (tokenIn.allowance(address(this), _swapProvider) < tokenAmountIn) {
-                tokenIn.safeApprove(_swapProvider, type(uint256).max);
+    )
+        external
+        payable
+        returns (
+            uint256 amountToRecipient,
+            uint256 amountToReferrer,
+            uint256 amountToManager,
+            uint256[] memory amountsIn
+        )
+    {
+        if (msg.value == 0) {
+            params.tokenIn.safeTransferFrom(msg.sender, address(this), params.tokenAmountIn);
+            if (params.tokenIn.allowance(address(this), _swapProvider) < params.tokenAmountIn) {
+                params.tokenIn.safeApprove(_swapProvider, type(uint256).max);
             }
         }
 
-        (bool success, bytes memory response) = address(_swapProvider).call{ value: msg.value }(data);
-        require(success, string(response));
+        {
+            (bool success, bytes memory response) = address(_swapProvider).call{ value: msg.value }(data);
+            require(success, string(response));
+        }
 
-        (IERC20[] memory tokens, , ) = _vault.getPoolTokens(poolId);
+        uint256[] memory maxAmountsInWithBPT;
+        uint256[] memory maxAmountsIn;
+        IERC20[] memory tokens;
+        {
+            (tokens, , ) = _vault.getPoolTokens(IManagedPool(IKassandraManagedPoolController(params.controller).pool()).getPoolId());
+            uint256 size = tokens.length;
+            maxAmountsInWithBPT = new uint256[](size);
+            maxAmountsIn = new uint256[](size - 1);
 
-        uint256 size = tokens.length;
-        uint256[] memory maxAmountsIn = new uint256[](size);
-        IAsset[] memory assets = _asIAsset(tokens);
-
-        for (uint i = 0; i < size; i++) {
-            if(tokens[i] == tokenExchange) {
-                maxAmountsIn[i] = tokenExchange.balanceOf(address(this));
-                if (tokenExchange.allowance(address(this), address(_vault)) < maxAmountsIn[i]) {
-                    tokenExchange.safeApprove(address(_vault), type(uint256).max);
+            for (uint i = 1; i < size; i++) {
+                if (tokens[i] == params.tokenExchange) {
+                    maxAmountsInWithBPT[i] = params.tokenExchange.balanceOf(address(this));
+                    maxAmountsIn[i - 1] = maxAmountsInWithBPT[i];
+                    if (params.tokenExchange.allowance(address(this), params.controller) < maxAmountsInWithBPT[i]) {
+                        params.tokenExchange.safeApprove(params.controller, type(uint256).max);
+                    }
                 }
-            } else {
-                maxAmountsIn[i] = 0;
             }
         }
+
         IVault.JoinPoolRequest memory request = IVault.JoinPoolRequest({
-            assets: assets,
-            maxAmountsIn: maxAmountsIn,
-            userData: abi.encode(EXACT_TOKENS_IN_FOR_BPT_OUT, maxAmountsIn, minTokenAmountOut),
+            assets: _asIAsset(tokens),
+            maxAmountsIn: maxAmountsInWithBPT,
+            userData: abi.encode(EXACT_TOKENS_IN_FOR_BPT_OUT, maxAmountsIn, params.minTokenAmountOut),
             fromInternalBalance: false
         });
 
-        _vault.joinPool(poolId, address(this), msg.sender, request);
+        return IKassandraManagedPoolController(params.controller).joinPool(params.recipient, params.referrer, request);
     }
 
-    function joinPool(bytes32 poolId, IVault.JoinPoolRequest memory request) external payable {
+    function joinPool(
+        address recipient,
+        address referrer,
+        address controller,
+        IVault.JoinPoolRequest memory request
+    )
+        external
+        payable
+        returns (
+            uint256 amountToRecipient,
+            uint256 amountToReferrer,
+            uint256 amountToManager,
+            uint256[] memory amountsIn
+        )
+    {
         for (uint i = 0; i < request.assets.length; i++) {
             address tokenIn = address(request.assets[i]);
             uint256 tokenAmountIn = request.maxAmountsIn[i];
-            
-            if(tokenAmountIn == 0 || tokenIn == address(0)) continue;
+
+            if (tokenAmountIn == 0 || tokenIn == address(0)) continue;
 
             IERC20(tokenIn).safeTransferFrom(msg.sender, address(this), tokenAmountIn);
-
-            if (IERC20(tokenIn).allowance(address(this), address(_vault)) < request.maxAmountsIn[i]) {
-                IERC20(tokenIn).safeApprove(address(_vault), type(uint256).max);
+            if (IERC20(tokenIn).allowance(address(this), controller) < request.maxAmountsIn[i]) {
+                IERC20(tokenIn).safeApprove(controller, type(uint256).max);
             }
         }
 
-        _vault.joinPool(poolId, address(this), msg.sender, request);
-    }
-
-    function exitPoolExactIn(bytes32 poolId, IVault.ExitPoolRequest memory request) external payable {
-        (, uint tokenInAmount) = abi.decode(request.userData, (uint256, uint256));
-        (address pool, ) = _vault.getPool(poolId);
-
-        IERC20(pool).safeTransferFrom(msg.sender, address(this), tokenInAmount);
-        if (IERC20(pool).allowance(address(this), address(_vault)) < tokenInAmount) {
-            IERC20(pool).safeApprove(address(_vault), type(uint256).max);
-        }
-        
-        _vault.exitPool(poolId, address(this), msg.sender, request);
+        return IKassandraManagedPoolController(controller).joinPool(recipient, referrer, request);
     }
 }
