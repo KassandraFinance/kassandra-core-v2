@@ -16,7 +16,9 @@ pragma solidity >=0.7.0 <0.9.0;
 pragma experimental ABIEncoderV2;
 
 import "@balancer-labs/v2-solidity-utils/contracts/openzeppelin/Ownable.sol";
+
 import "./interfaces/IWhitelist.sol";
+import "./lib/KacyErrors.sol";
 
 contract KassandraWhitelist is IWhitelist, Ownable {
     bool internal constant _IS_BLACKLIST = false;
@@ -51,7 +53,7 @@ contract KassandraWhitelist is IWhitelist, Ownable {
     }
 
     function addTokenToList(address token) external onlyOwner {
-        require(token != address(0), "ERR_ZERO_ADDRESS");
+        require(token != address(0), KacyErrors.ZERO_ADDRESS);
         _require(_tokenList[token] == false, Errors.TOKEN_ALREADY_REGISTERED);
 
         _tokenList[token] = true;
@@ -63,7 +65,7 @@ contract KassandraWhitelist is IWhitelist, Ownable {
     }
 
     function removeTokenFromList(address token) external onlyOwner {
-        require(token != address(0), "ERR_ZERO_ADDRESS");
+        require(token != address(0), KacyErrors.ZERO_ADDRESS);
         _require(_tokenList[token] == true, Errors.TOKEN_NOT_REGISTERED);
         
         _tokenList[token] = false;

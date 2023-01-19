@@ -34,19 +34,19 @@ describe('PrivateInvestors', () => {
     return { privateInvestors, investor, ownerPool, factory, controller, invalidController, managedPool };
   }
 
-  it("should revert if call setFactory is not the owner", async () => {
+  it("should revert setFactory if caller is not the owner", async () => {
     const { privateInvestors, factory } = await loadFixture(deployPrivateInvestors);
 
     await expect(privateInvestors.connect(factory).setFactory(factory.address)).to.revertedWith('BAL#426');
   })
 
-  it("should revert if call setController is not authorized", async () => {
+  it("should revert setController if caller is not an authorized factory", async () => {
     const { privateInvestors, controller } = await loadFixture(deployPrivateInvestors);
 
     await expect(privateInvestors.setController(controller.address)).to.revertedWith('BAL#401');
   })
 
-  it('should revert with ERR_NOT_AUTHORIZED if controlller is not authorized', async () => {
+  it('should revert addPrivateInvestor if controller is not authorized', async () => {
     const { privateInvestors, investor } = await loadFixture(deployPrivateInvestors);
 
     await expect(privateInvestors.addPrivateInvestor(investor.address)).to.revertedWith(
@@ -54,14 +54,14 @@ describe('PrivateInvestors', () => {
     );
   });
 
-  it('should revert with ERR_INVALID_OWNER if controlller is not owner of the pool on addAllowedInvestor', async () => {
+  it('should revert if controller is not the owner of the pool on addAllowedInvestor', async () => {
     const { privateInvestors, invalidController, investor, factory } = await loadFixture(deployPrivateInvestors);
     await privateInvestors.connect(factory).setController(invalidController.address);
 
     await expect(invalidController.addAllowedInvestor(investor.address, privateInvestors.address)).to.revertedWith('BAL#426');
   });
 
-  it('should revert with ADDRESS_ALREADY_ALLOWLISTED if investor is already allowed', async () => {
+  it('should revert if investor is already allowed', async () => {
     const { privateInvestors, investor, controller, factory } = await loadFixture(deployPrivateInvestors);
     await privateInvestors.connect(factory).setController(controller.address);
 
@@ -81,7 +81,7 @@ describe('PrivateInvestors', () => {
     expect(await privateInvestors.isInvestorAllowed(managedPool.address, investor.address)).to.true;
   })
 
-  it('should revert with ERR_NOT_AUTHORIZED if controlller is not authorized', async () => {
+  it('should revert removePrivateInvestor if controller is not authorized', async () => {
     const { privateInvestors, investor } = await loadFixture(deployPrivateInvestors);
 
     await expect(privateInvestors.removePrivateInvestor(investor.address)).to.revertedWith(
@@ -89,14 +89,14 @@ describe('PrivateInvestors', () => {
     );
   });
 
-  it('should revert with ERR_INVALID_OWNER if controlller is not owner of the pool on removeAllowedInvestor', async () => {
+  it('should revert if controller is not the owner of the pool on removeAllowedInvestor', async () => {
     const { privateInvestors, invalidController, investor, factory } = await loadFixture(deployPrivateInvestors);
     await privateInvestors.connect(factory).setController(invalidController.address);
 
     await expect(invalidController.removeAllowedInvestor(investor.address, privateInvestors.address)).to.revertedWith('BAL#426');
   });
 
-  it('should revert with ADDRESS_NOT_ALLOWLISTED if investor is not listed', async () => {
+  it('should revert if investor is not listed', async () => {
     const { privateInvestors, investor, controller, factory } = await loadFixture(deployPrivateInvestors);
     await privateInvestors.connect(factory).setController(controller.address);
 

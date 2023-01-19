@@ -31,13 +31,13 @@ describe("Whitelist", () => {
         await expect(whitelist.connect(account).addTokenToList(DAI_ADDRESS)).to.revertedWith("BAL#426");
     })
 
-    it("must not set whitelist if token is zero", async () => {
+    it("must not set whitelist if token is zero address", async () => {
         const { whitelist } = await loadFixture(WhitelistDeploy);
 
-        await expect(whitelist.addTokenToList(ethers.constants.AddressZero)).to.revertedWith("ERR_ZERO_ADDRESS");
+        await expect(whitelist.addTokenToList(ethers.constants.AddressZero)).to.revertedWith("KACY#101");
     })
 
-    it("should set whitelist", async () => {
+    it("should add token to whitelist", async () => {
         const { whitelist } = await loadFixture(WhitelistDeploy);
         
         await whitelist.addTokenToList(DAI_ADDRESS);
@@ -46,7 +46,7 @@ describe("Whitelist", () => {
         expect(await whitelist.getTokens(0, 1)).deep.equal([DAI_ADDRESS]);
     })
 
-    it("should update whitelist", async () => {
+    it("should remove token to whitelist", async () => {
         const { whitelist, account } = await loadFixture(WhitelistDeploy);
         await whitelist.addTokenToList(DAI_ADDRESS);
         
@@ -56,15 +56,20 @@ describe("Whitelist", () => {
         expect(await whitelist.getTokens(0, 1)).deep.equal([]);
     })
 
-
-    it("should revert if token already has add", async () => {
+    it("should revert if token has already been add", async () => {
         const { whitelist } = await loadFixture(WhitelistDeploy);
         await whitelist.addTokenToList(DAI_ADDRESS);
         
         await expect(whitelist.addTokenToList(DAI_ADDRESS)).to.revertedWith("BAL#522");
     })
 
-    it("should return false if token has not been defined", async () => {
+    it("should revert if token can't be removed because it's not been added", async () => {
+        const { whitelist } = await loadFixture(WhitelistDeploy);
+
+        await expect(whitelist.removeTokenFromList(ANY_ADDRESS)).to.revertedWith("BAL#521");
+    })
+
+    it("should return false if token has not been whitelisted", async () => {
         const { whitelist } = await loadFixture(WhitelistDeploy);
 
         expect(await whitelist.isTokenWhitelisted(ANY_ADDRESS)).false
@@ -84,7 +89,7 @@ describe("Whitelist", () => {
         expect(tokensList).deep.equal(filterTokens)
     })
 
-    it("should return tokens with pagination", async () => {
+    it("should return tokens with pagination and skip", async () => {
         const { whitelist } = await loadFixture(WhitelistDeploy);
         const skip = 2;
         const take = 5;
@@ -98,7 +103,7 @@ describe("Whitelist", () => {
         expect(tokensList).deep.equal(filterTokens)
     })
 
-    it("should returns correct tokens after set one token not allowed", async () => {
+    it("should return correct tokens even after removing one token", async () => {
         const { whitelist } = await loadFixture(WhitelistDeploy);
         const skip = 0;
         const take = 10;
@@ -114,7 +119,7 @@ describe("Whitelist", () => {
         expect(tokensList.length).to.equal(_tokens.length);
     })
 
-    it("should returns correct tokens after set any token not allowed", async () => {
+    it("should return correct tokens even after removing multiple tokens", async () => {
         const { whitelist } = await loadFixture(WhitelistDeploy);
         const skip = 0;
         const take = 10;
@@ -133,7 +138,7 @@ describe("Whitelist", () => {
         expect(tokensList.length).to.equal(tokens.length - 3);
     })
 
-    it("should revert with ERR_SKIP_OUT_OFF_RANGE if skip is greater than tokens length", async () => {
+    it("should return empty array if skip is greater than tokens length", async () => {
         const { whitelist } = await loadFixture(WhitelistDeploy);
         const invalidSkip = 10;
         const take = 10;
@@ -147,7 +152,7 @@ describe("Whitelist", () => {
         expect(await whitelist.getTokens(invalidSkip, take)).to.deep.equal([]);
     })
 
-    it("should retun false is call function isBlacklist", async () => {
+    it("should return false for isBlacklist", async () => {
         const { whitelist } = await loadFixture(WhitelistDeploy);
 
         expect(await whitelist.isBlacklist()).to.false;

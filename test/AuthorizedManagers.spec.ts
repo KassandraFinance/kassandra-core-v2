@@ -3,7 +3,7 @@ import { expect } from "chai";
 import { ethers } from "hardhat";
 import { AuthorizedManagers } from "../typechain-types";
 
-describe("CreateAuthorizedManagers", () => {
+describe("AuthorizedManagers", () => {
     let authorizedManagers: AuthorizedManagers;
     let owner: SignerWithAddress;
     let manager: SignerWithAddress;
@@ -18,12 +18,12 @@ describe("CreateAuthorizedManagers", () => {
         await authorizedManagers.deployed();
     })
 
-    it("should revert if caller is not owner", async () => {
+    it("should revert if caller is not the owner", async () => {
         await expect(authorizedManagers.connect(manager).setManager(manager.address, 10)).to.revertedWith("BAL#426");
     })
 
     it("should revert if manager is equal zero address", async () => {
-        await expect(authorizedManagers.setManager(ethers.constants.AddressZero, 2)).to.revertedWith("KACY_ZERO_ADDRESS");
+        await expect(authorizedManagers.setManager(ethers.constants.AddressZero, 2)).to.revertedWith("KACY#101");
     })
 
     it("should set manager", async () => {
@@ -32,22 +32,22 @@ describe("CreateAuthorizedManagers", () => {
         expect(await authorizedManagers.canCreatePool(manager.address)).to.true;
     })
 
-    it("should return amount of pools the manager can create", async () => {
+    it("should return the amount of pools the manager can create", async () => {
         expect(await authorizedManagers.getAllowedPoolsToCreate(manager.address)).to.equal(2);
     })
     
-    it("should revert if msg.sender not is factory", async () => {
-        await expect(authorizedManagers.managerCreatedPool(manager.address)).to.revertedWith("ERR_NOT_ALLOWED");
+    it("should revert if msg.sender is not the Kassandra factory", async () => {
+        await expect(authorizedManagers.managerCreatedPool(manager.address)).to.revertedWith("BAL#401");
     })
 
-    it("should update manager if update is called", async () => {
+    it("should update the amount of pools the manager can create", async () => {
         await authorizedManagers.connect(factory).managerCreatedPool(manager.address);
         await authorizedManagers.connect(factory).managerCreatedPool(manager.address);
 
         expect(await authorizedManagers.canCreatePool(manager.address)).to.false;
     })
 
-    it("should revert if manager not is allowed", async () => {
-        await expect(authorizedManagers.connect(factory).managerCreatedPool(manager.address)).to.revertedWith("ERR_NOT_ALLOWED");
+    it("should revert if manager is not allowed to create new pools", async () => {
+        await expect(authorizedManagers.connect(factory).managerCreatedPool(manager.address)).to.revertedWith("BAL#401");
     })
 })

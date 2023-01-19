@@ -123,40 +123,40 @@ describe("KassandraControlledManagedPoolFactory", () => {
         await dai.connect(manager).approve(controllerManagedFactory.address, await dai.balanceOf(manager.address));
     })
 
-    it("should be revert if manager not is authorezed", async () => {
+    it("should revert if manager is not allowed to create pools", async () => {
         await expect(controllerManagedFactory.create(
             managedPoolParams,
             settingsParams,
             feesSettings,
             whitelist.address,
             maxAmountsIn,
-            false,
+            true,
         )).to.be.revertedWith("BAL#401");
     })
 
-    it("should be reversed if parameters are incompatible", async () => {
+    it("should revert if amounts and tokens lists are incompatible", async () => {
         await expect(controllerManagedFactory.connect(manager).create(
             managedPoolParams,
             { ...settingsParams, tokens: [...settingsParams.tokens, ethers.constants.AddressZero]},
             feesSettings,
             whitelist.address,
             maxAmountsIn,
-            false,
+            true,
         )).to.be.revertedWith("BAL#103");
     })
 
-    it("should be reversed if token not is whitelisted", async () => {
+    it("should revert if token is not whitelisted", async () => {
         await expect(controllerManagedFactory.connect(manager).create(
             managedPoolParams,
             settingsParams,
             feesSettings,
             whitelist.address,
             maxAmountsIn,
-            false,
+            true,
         )).to.be.revertedWith("BAL#309");
     })
 
-    it("should be create pool and controller if manager already authorized", async () => {
+    it("should create pool and controller", async () => {
         await whitelist.addTokenToList(DAI_ADDRESS);
         const response = await controllerManagedFactory.connect(manager).callStatic.create(
             managedPoolParams,
@@ -188,7 +188,7 @@ describe("KassandraControlledManagedPoolFactory", () => {
         expect(await newController.getManager()).to.equal(manager.address);
     })
 
-    it("should revert if investor not allowed", async () => {
+    it("should revert if investor not allowed in a private pool", async () => {
         const EXACT_TOKENS_IN_FOR_BPT_OUT = 1;
         const amounts = [ethers.utils.parseEther("2"), ethers.BigNumber.from("0")];
         const userData = defaultAbiCoder.encode(['uint256', 'uint256[]', 'uint256'], [EXACT_TOKENS_IN_FOR_BPT_OUT, amounts, 0]);
@@ -202,7 +202,7 @@ describe("KassandraControlledManagedPoolFactory", () => {
         await expect(newController.connect(investor).joinPool(investor.address, referral.address, request)).revertedWith("BAL#401");
     })
 
-    it("should be able join in the pool with join kind EXACT_TOKENS_IN_FOR_BPT_OUT", async () => {
+    it("should be able to join in the pool with join kind EXACT_TOKENS_IN_FOR_BPT_OUT", async () => {
         await newController.connect(manager).addAllowedAddress(investor.address);
         const EXACT_TOKENS_IN_FOR_BPT_OUT = 1;
         const poolId = await pool.getPoolId();
@@ -222,7 +222,7 @@ describe("KassandraControlledManagedPoolFactory", () => {
         request.userData = defaultAbiCoder.encode(['uint256', 'uint256[]', 'uint256'], [EXACT_TOKENS_IN_FOR_BPT_OUT, amounts, res.amountToRecipient]);
         await newController.connect(investor).joinPool(investor.address, referral.address, request);
 
-        const fees = await newController.getInvestFees();
+        const fees = await newController.getJoinFees();
         const amountOut = response.bptOut;
         const amountToManager = amountOut.mul(fees.feesToManager).div(1e18.toString());
         const amountToReferral = amountOut.mul(fees.feesToReferral).div(1e18.toString());
@@ -236,7 +236,7 @@ describe("KassandraControlledManagedPoolFactory", () => {
         expect(balanceReferral.gte(amountToReferral)).to.true;
     })
 
-    it("should be able join in the pool with join kind TOKEN_IN_FOR_EXACT_BPT_OUT", async () => {
+    it("should be able to join in the pool with join kind TOKEN_IN_FOR_EXACT_BPT_OUT", async () => {
         const TOKEN_IN_FOR_EXACT_BPT_OUT = 2;
         const amountToInvestor = ethers.BigNumber.from("17000000000");
         const poolId = await pool.getPoolId();
@@ -256,7 +256,7 @@ describe("KassandraControlledManagedPoolFactory", () => {
 
         await newController.connect(investor).joinPool(investor.address, referral.address, request);
 
-        const fees = await newController.getInvestFees();
+        const fees = await newController.getJoinFees();
         const amountToManager = totalAmountOut.mul(fees.feesToManager).div(1e18.toString());
         const amountToReferral = totalAmountOut.mul(fees.feesToReferral).div(1e18.toString());
 
@@ -269,7 +269,7 @@ describe("KassandraControlledManagedPoolFactory", () => {
         expect(balanceReferral.eq(amountToReferral)).to.true;
     })
 
-    it("should be able join in the pool with join kind ALL_TOKENS_IN_FOR_EXACT_BPT_OUT", async () => {
+    it("should be able to join in the pool with join kind ALL_TOKENS_IN_FOR_EXACT_BPT_OUT", async () => {
         const ALL_TOKENS_IN_FOR_EXACT_BPT_OUT = 3;
         const poolId = await pool.getPoolId();
         const amountToInvestor = ethers.BigNumber.from("170000000000000");
@@ -299,7 +299,7 @@ describe("KassandraControlledManagedPoolFactory", () => {
         expect(initialBalanceInvestorDAI.sub(await dai.balanceOf(investor.address)).lte(responsequery.amountsIn[2])).to.true;
     })
 
-    it("should returns true if pool is created from Kassandra factory", async () => {
+    it("should return true if pool is created from Kassandra factory", async () => {
         expect(await controllerManagedFactory.isPoolFromFactory(pool.address)).to.true;
     })
 })

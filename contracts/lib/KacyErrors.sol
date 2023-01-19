@@ -18,6 +18,6 @@ pragma experimental ABIEncoderV2;
 /* solhint-disable private-vars-leading-underscore */
 
 library KacyErrors {
-    string internal constant ZERO_VALUE = "KACY_ZERO_VALUE";
-    string internal constant ZERO_ADDRESS = "KACY_ZERO_ADDRESS";
+    string internal constant ZERO_VALUE = "KACY#100";
+    string internal constant ZERO_ADDRESS = "KACY#101";
 }
