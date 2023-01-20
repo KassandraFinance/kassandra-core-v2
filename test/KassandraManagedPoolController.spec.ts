@@ -13,6 +13,10 @@ describe("KassandraManagedPoolController", () => {
     let owner: SignerWithAddress;
     let manager: SignerWithAddress;
     let investor: SignerWithAddress;
+    const fees = {
+        feesToManager: ethers.utils.parseEther("0.015"),
+        feesToReferral: ethers.utils.parseEther("0.01")
+    }
 
     before(async () => {
         [owner, manager, investor] = await ethers.getSigners();
@@ -42,7 +46,7 @@ describe("KassandraManagedPoolController", () => {
         const KassandraManagedPoolController = await ethers.getContractFactory("KassandraManagedPoolController");
         kassandraManagedPoolController = await KassandraManagedPoolController.deploy(
             baseRights,
-            { feesToManager: 0.015e18.toString(), feesToReferral: 0.015e18.toString() },
+            fees,
             kassandraRules.address,
             manager.address,
             privateInvestors.address,
@@ -69,15 +73,63 @@ describe("KassandraManagedPoolController", () => {
         })
     })
 
-    describe("Set Allow list LP", () => {
-        // to do -> create a private pool and set pool is public
-        // it("should set setMustAllowlistLPs", async () => {
-        //     const mustAllowlistLPs = true;
-        //     await kassandraManagedPoolController.connect(manager).setMustAllowlistLPs(mustAllowlistLPs);
+    describe("Fixed Permissions", () => {
+        it("should return true for canChangeWeights", async () => {
+            expect(await kassandraManagedPoolController.canChangeWeights()).to.true;
+        })
 
-        //     expect(await kassandraManagedPoolController.isPrivatePool()).to.be.equal(mustAllowlistLPs);
-        // })
+        it("should return false for canDisableSwaps", async () => {
+            expect(await kassandraManagedPoolController.canDisableSwaps()).to.false;
+        })
 
+        it("should return false for canSetMustAllowlistLPs", async () => {
+            expect(await kassandraManagedPoolController.canSetMustAllowlistLPs()).to.false;
+        })
+
+        it("should return true for canChangeTokens", async () => {
+            expect(await kassandraManagedPoolController.canChangeTokens()).to.true;
+        })
+
+        it("should return false for canChangeManagementFees", async () => {
+            expect(await kassandraManagedPoolController.canChangeManagementFees()).to.false;
+        })
+
+        it("should return false for canDisableJoinExit", async () => {
+            expect(await kassandraManagedPoolController.canDisableJoinExit()).to.false;
+        })
+
+        it("should return true for canTransferOwnership", async () => {
+            expect(await kassandraManagedPoolController.canTransferOwnership()).to.true;
+        })
+
+        it("should return true for canChangeSwapFee", async () => {
+            expect(await kassandraManagedPoolController.canChangeSwapFee()).to.true;
+        })
+
+        it("should return true for canUpdateMetadata", async () => {
+            expect(await kassandraManagedPoolController.canUpdateMetadata()).to.true;
+        })
+    });
+
+    describe("Getters", () => {
+        it("should revert if caller is not the manager", async () => {
+            await expect(kassandraManagedPoolController.setPublicPool()).to.revertedWith("BAL#426");
+            await expect(kassandraManagedPoolController.addAllowedAddress(investor.address)).to.revertedWith("BAL#426");
+            await expect(kassandraManagedPoolController.removeAllowedAddress(investor.address)).to.revertedWith("BAL#426");
+        })
+
+        it("should return a timedelta for getMinWeightChangeDuration", async () => {
+            expect(await kassandraManagedPoolController.getMinWeightChangeDuration()).to.equal(time.duration.days(1));
+        })
+
+        it("should be able to get the join fees", async () => {
+            const [ managerFee, referrerFee ] = await kassandraManagedPoolController.getJoinFees();
+            expect(managerFee).equal(fees.feesToManager);
+            expect(referrerFee).equal(fees.feesToReferral);
+        })
+    })
+
+    describe("Private Pool", () => {
         it("should add private investors", async () => {
             await kassandraManagedPoolController.connect(manager).addAllowedAddress(investor.address);
 
@@ -90,71 +142,17 @@ describe("KassandraManagedPoolController", () => {
             expect(await privateInvestors.isInvestorAllowed(managedPool.address, investor.address)).to.false;
         })
 
-        it("should revert if caller is not the manager", async () => {
-            await expect(kassandraManagedPoolController.setPublicPool()).to.revertedWith("BAL#426");
-            await expect(kassandraManagedPoolController.addAllowedAddress(investor.address)).to.revertedWith("BAL#426");
-            await expect(kassandraManagedPoolController.removeAllowedAddress(investor.address)).to.revertedWith("BAL#426");
+        it("should start as a private pool", async () => {
+            expect(await kassandraManagedPoolController.isPrivatePool()).true;
         })
 
-        describe("Fixed Permissions", () => {
-            it("should return true for canChangeWeights", async () => {
-                expect(await kassandraManagedPoolController.canChangeWeights()).to.true;
-            })
-
-            it("should return false for canDisableSwaps", async () => {
-                expect(await kassandraManagedPoolController.canDisableSwaps()).to.false;
-            })
-
-            it("should return false for canSetMustAllowlistLPs", async () => {
-                expect(await kassandraManagedPoolController.canSetMustAllowlistLPs()).to.false;
-            })
-
-            it("should return false for canSetCircuitBreakers", async () => {
-                expect(await kassandraManagedPoolController.canSetCircuitBreakers()).to.false;
-            })
-
-            it("should return true for canChangeTokens", async () => {
-                expect(await kassandraManagedPoolController.canChangeTokens()).to.true;
-            })
-
-            it("should return false for canChangeManagementFees", async () => {
-                expect(await kassandraManagedPoolController.canChangeManagementFees()).to.false;
-            })
-
-            it("should return false for canDisableJoinExit", async () => {
-                expect(await kassandraManagedPoolController.canDisableJoinExit()).to.false;
-            })
-
-            it("should return true for canTransferOwnership", async () => {
-                expect(await kassandraManagedPoolController.canTransferOwnership()).to.true;
-            })
-
-            it("should return true for canChangeSwapFee", async () => {
-                expect(await kassandraManagedPoolController.canChangeSwapFee()).to.true;
-            })
-
-            it("should return true for canUpdateMetadata", async () => {
-                expect(await kassandraManagedPoolController.canUpdateMetadata()).to.true;
-            })
-        });
-
-        it("should return a timedelta for getMinWeightChangeDuration", async () => {
-            expect(await kassandraManagedPoolController.getMinWeightChangeDuration()).to.equal(time.duration.days(1));
+        it("should make a private pool public", async() => {
+            await kassandraManagedPoolController.connect(manager).setPublicPool();
+            expect(await kassandraManagedPoolController.isPrivatePool()).false;
         })
 
-        describe("Private Pool", () => {
-            it("should start as a private pool", async () => {
-                expect(await kassandraManagedPoolController.isPrivatePool()).true;
-            })
-
-            it("should make a private pool public", async() => {
-                await kassandraManagedPoolController.connect(manager).setPublicPool();
-                expect(await kassandraManagedPoolController.isPrivatePool()).false;
-            })
-
-            it("should not allow a public pool going private", async() => {
-                await expect(kassandraManagedPoolController.connect(manager).setPublicPool()).revertedWith("BAL#435");;
-            })
+        it("should not allow a public pool going private", async() => {
+            await expect(kassandraManagedPoolController.connect(manager).setPublicPool()).revertedWith("BAL#435");;
         })
     })
 })
