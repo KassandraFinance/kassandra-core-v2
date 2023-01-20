@@ -14,8 +14,11 @@
 
 pragma solidity >=0.7.0 <0.9.0;
 
+import "@balancer-labs/v2-interfaces/contracts/solidity-utils/openzeppelin/IERC20.sol";
+
 contract ManagedPoolMock {
     address private _owner;
+    uint256[] private _normalizedWeights;
 
     constructor(address owner) {
         _owner = owner;
@@ -25,12 +28,32 @@ contract ManagedPoolMock {
         _owner = owner;
     }
 
+    function setNormalizedWeights(uint256[] memory weights) external {
+        _normalizedWeights = weights;
+    }
+
     function getOwner() external view returns (address) {
         return _owner;
     }
 
     function getPoolId() external pure returns (bytes32) {
         return bytes32("KassandraMockedPool");
+    }
+
+    function getNormalizedWeights() external view returns(uint256[] memory) {
+        return _normalizedWeights;
+    }
+
+    function updateWeightsGradually(
+        uint256 startTime,
+        uint256 endTime,
+        IERC20[] calldata tokens,
+        uint256[] calldata endWeights
+    ) external {
+        require(tokens.length == endWeights.length, "Tokens and weights mismatch");
+        for (uint256 i = 0; i < endWeights.length; i++) {
+            require(endWeights[i] > 0, "No weight should be zero");
+        }
     }
 
     function setMustAllowlistLPs(bool mustAllowlistLPs) external {

@@ -7,7 +7,7 @@ describe("KassandraControlledManagedPoolFactory", () => {
     async function deployFactory() {
         const [owner, manager] = await ethers.getSigners();
 
-        const AssetManagerDeployer = await ethers.getContractFactory("VaultMock");
+        const AssetManagerDeployer = await ethers.getContractFactory("KacyAssetManager");
         const assetManager = await upgrades.deployProxy(AssetManagerDeployer) as KacyAssetManager;
 
         const VaultDeployer = await ethers.getContractFactory("VaultMock");
