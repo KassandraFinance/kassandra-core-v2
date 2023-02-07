@@ -45,7 +45,7 @@ contract KassandraManagedPoolController is BasePoolController, Proxy {
     using FixedPoint for uint256;
     using FixedPoint for uint64;
 
-    uint256 internal constant _MAX_INVEST_FEES = 95 * 10 ** 17;
+    uint256 internal constant _MAX_INVEST_FEES = 95 * 10 ** 16;
 
     struct FeesPercentages {
         uint64 feesToManager;
