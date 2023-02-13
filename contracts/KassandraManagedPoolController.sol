@@ -185,6 +185,10 @@ contract KassandraManagedPoolController is BasePoolController, Proxy {
         _privateInvestors.removePrivateInvestors(members);
     }
 
+    function isAllowedAddress(address member) external view virtual returns (bool) {
+        return !_isPrivatePool || _privateInvestors.isInvestorAllowed(pool, member);
+    }
+
     /**
      * @dev Transfer any BPT management fees from this contract to the recipient.
      */

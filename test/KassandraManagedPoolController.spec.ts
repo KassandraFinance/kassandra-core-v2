@@ -27,7 +27,7 @@ describe("KassandraManagedPoolController", () => {
         await privateInvestors.setFactory(owner.address);
 
         const ManagedPool = await ethers.getContractFactory("ManagedPoolMock");
-        managedPool = await ManagedPool.deploy(owner.address);
+        managedPool = await ManagedPool.deploy(owner.address) as ManagedPoolMock;
         await managedPool.deployed();
 
         const baseRights = {
@@ -54,7 +54,7 @@ describe("KassandraManagedPoolController", () => {
             VAULT_ADDRESS,
             ethers.constants.AddressZero,
             whitelist.address
-        );
+        ) as KassandraManagedPoolController;
 
         await kassandraManagedPoolController.deployed();
         await managedPool.setOwner(kassandraManagedPoolController.address);
@@ -136,10 +136,18 @@ describe("KassandraManagedPoolController", () => {
             expect(await privateInvestors.isInvestorAllowed(managedPool.address, investor.address)).to.true;
         })
 
+        it("should return true if investor is allowed member", async () => {
+            expect(await kassandraManagedPoolController.isAllowedAddress(investor.address)).to.true;
+        })
+
         it("should remove private investors", async () => {
             await kassandraManagedPoolController.connect(manager).removeAllowedAddresses([investor.address]);
 
             expect(await privateInvestors.isInvestorAllowed(managedPool.address, investor.address)).to.false;
+        })
+
+        it("should return false if investor is not allowed member", async () => {
+            expect(await kassandraManagedPoolController.isAllowedAddress(investor.address)).to.false;
         })
 
         it("should start as a private pool", async () => {
@@ -149,6 +157,10 @@ describe("KassandraManagedPoolController", () => {
         it("should make a private pool public", async() => {
             await kassandraManagedPoolController.connect(manager).setPublicPool();
             expect(await kassandraManagedPoolController.isPrivatePool()).false;
+        })
+
+        it("should return true on isAllowedAddress if pools is public", async () => {
+            expect(await kassandraManagedPoolController.isAllowedAddress(investor.address)).to.true;
         })
 
         it("should not allow a public pool going private", async() => {
