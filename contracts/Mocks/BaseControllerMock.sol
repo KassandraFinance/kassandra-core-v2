@@ -23,11 +23,11 @@ contract BaseControllerMock {
         pool = _pool;
     }
 
-    function addAllowedInvestor(address investor, address privateInvestorContract) external {
-        IPrivateInvestors(privateInvestorContract).addPrivateInvestor(investor);
+    function addAllowedInvestors(address[] calldata investors, address privateInvestorContract) external {
+        IPrivateInvestors(privateInvestorContract).addPrivateInvestors(investors);
     }
 
-    function removeAllowedInvestor(address investor, address privateInvestorContract) external {
-        IPrivateInvestors(privateInvestorContract).removePrivateInvestor(investor);
+    function removeAllowedInvestors(address[] calldata investors, address privateInvestorContract) external {
+        IPrivateInvestors(privateInvestorContract).removePrivateInvestors(investors);
     }
 }

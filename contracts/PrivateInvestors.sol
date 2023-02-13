@@ -54,31 +54,35 @@ contract PrivateInvestors is IPrivateInvestors, OwnableUpgradeable {
         return _allowedInvestors[pool][investor];
     }
 
-    function addPrivateInvestor(address investor) external override {
+    function addPrivateInvestors(address[] calldata investors) external override {
         _require(_controllers[msg.sender], Errors.SENDER_NOT_ALLOWED);
-
+        
         address pool = BasePoolController(msg.sender).pool();
         address owner = ManagedPool(pool).getOwner();
 
         _require(owner == msg.sender, Errors.CALLER_IS_NOT_OWNER);
-        _require(_allowedInvestors[pool][investor] != true, Errors.ADDRESS_ALREADY_ALLOWLISTED);
 
-        _allowedInvestors[pool][investor] = true;
+        uint256 size = investors.length;
+        for (uint256 i = 0; i < size; i++) {
+            _allowedInvestors[pool][investors[i]] = true;
+        }
 
-        emit PrivateInvestorAdded(ManagedPool(pool).getPoolId(), pool, investor);
+        emit PrivateInvestorsAdded(ManagedPool(pool).getPoolId(), pool, investors);
     }
 
-    function removePrivateInvestor(address investor) external override {
+    function removePrivateInvestors(address[] calldata investors) external override {
         _require(_controllers[msg.sender], Errors.SENDER_NOT_ALLOWED);
 
         address pool = BasePoolController(msg.sender).pool();
         address owner = ManagedPool(pool).getOwner();
 
         _require(owner == msg.sender, Errors.CALLER_IS_NOT_OWNER);
-        _require(_allowedInvestors[pool][investor] != false, Errors.ADDRESS_NOT_ALLOWLISTED);
 
-        _allowedInvestors[pool][investor] = false;
+        uint256 size = investors.length;
+        for (uint256 i = 0; i < size; i++) {
+            _allowedInvestors[pool][investors[i]] = false;
+        }
 
-        emit PrivateInvestorRemoved(ManagedPool(pool).getPoolId(), pool, investor);
+        emit PrivateInvestorsRemoved(ManagedPool(pool).getPoolId(), pool, investors);
     }
 }

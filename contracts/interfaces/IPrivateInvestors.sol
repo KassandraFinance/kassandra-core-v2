@@ -19,11 +19,11 @@ interface IPrivateInvestors {
 
     function isInvestorAllowed(address pool, address investor) external view returns (bool);
 
-    function addPrivateInvestor(address investor) external;
+    function addPrivateInvestors(address[] calldata investors) external;
 
-    function removePrivateInvestor(address investor) external;
+    function removePrivateInvestors(address[] calldata investors) external;
 
-    event PrivateInvestorAdded(bytes32 indexed poolId, address indexed poolAddress, address indexed investor);
+    event PrivateInvestorsAdded(bytes32 indexed poolId, address indexed poolAddress, address[] investor);
 
-    event PrivateInvestorRemoved(bytes32 indexed poolId, address indexed poolAddress, address indexed investor);
+    event PrivateInvestorsRemoved(bytes32 indexed poolId, address indexed poolAddress, address[] investor);
 }

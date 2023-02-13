@@ -177,12 +177,12 @@ contract KassandraManagedPoolController is BasePoolController, Proxy {
         _isPrivatePool = false;
     }
 
-    function addAllowedAddress(address member) external virtual onlyManager withBoundPool {
-        _privateInvestors.addPrivateInvestor(member);
+    function addAllowedAddresses(address[] calldata members) external virtual onlyManager withBoundPool {
+        _privateInvestors.addPrivateInvestors(members);
     }
 
-    function removeAllowedAddress(address member) external virtual onlyManager withBoundPool {
-        _privateInvestors.removePrivateInvestor(member);
+    function removeAllowedAddresses(address[] calldata members) external virtual onlyManager withBoundPool {
+        _privateInvestors.removePrivateInvestors(members);
     }
 
     /**

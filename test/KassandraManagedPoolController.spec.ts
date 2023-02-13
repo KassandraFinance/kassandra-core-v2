@@ -114,8 +114,8 @@ describe("KassandraManagedPoolController", () => {
     describe("Getters", () => {
         it("should revert if caller is not the manager", async () => {
             await expect(kassandraManagedPoolController.setPublicPool()).to.revertedWith("BAL#426");
-            await expect(kassandraManagedPoolController.addAllowedAddress(investor.address)).to.revertedWith("BAL#426");
-            await expect(kassandraManagedPoolController.removeAllowedAddress(investor.address)).to.revertedWith("BAL#426");
+            await expect(kassandraManagedPoolController.addAllowedAddresses([investor.address])).to.revertedWith("BAL#426");
+            await expect(kassandraManagedPoolController.removeAllowedAddresses([investor.address])).to.revertedWith("BAL#426");
         })
 
         it("should return a timedelta for getMinWeightChangeDuration", async () => {
@@ -131,13 +131,13 @@ describe("KassandraManagedPoolController", () => {
 
     describe("Private Pool", () => {
         it("should add private investors", async () => {
-            await kassandraManagedPoolController.connect(manager).addAllowedAddress(investor.address);
+            await kassandraManagedPoolController.connect(manager).addAllowedAddresses([investor.address]);
 
             expect(await privateInvestors.isInvestorAllowed(managedPool.address, investor.address)).to.true;
         })
 
         it("should remove private investors", async () => {
-            await kassandraManagedPoolController.connect(manager).removeAllowedAddress(investor.address);
+            await kassandraManagedPoolController.connect(manager).removeAllowedAddresses([investor.address]);
 
             expect(await privateInvestors.isInvestorAllowed(managedPool.address, investor.address)).to.false;
         })
