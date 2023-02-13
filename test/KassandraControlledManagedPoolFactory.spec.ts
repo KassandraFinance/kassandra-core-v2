@@ -1,7 +1,7 @@
 import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 import { expect } from "chai";
 import { ethers, upgrades } from "hardhat";
-import { AuthorizedManagers, KacyAssetManager, KassandraRules, KassandraWhitelist, PrivateInvestorsMock } from "../typechain-types";
+import { AuthorizedManagers, KacyAssetManager, KassandraControlledManagedPoolFactory, KassandraRules, KassandraWhitelist, PrivateInvestorsMock } from "../typechain-types";
 
 describe("KassandraControlledManagedPoolFactory", () => {
     async function deployFactory() {
@@ -39,7 +39,7 @@ describe("KassandraControlledManagedPoolFactory", () => {
             vault.address,
             kassandraRules.address,
             assetManager.address,
-        );
+        ) as KassandraControlledManagedPoolFactory;
 
         await authorizedManagers.deployed();
         await authorizedManagers.setManager(manager.address, 2);
