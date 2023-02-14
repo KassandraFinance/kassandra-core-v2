@@ -30,6 +30,8 @@ contract KassandraRules is IKassandraRules, Initializable, OwnableUpgradeable {
      * @dev Emitted when the implementation returned by the beacon is changed.
      */
     event Upgraded(address indexed implementation);
+    event WeightChangeDurationUpdated(uint256 oldMinimumDuration, uint256 newMinimumDuration);
+    event WeightChangePerSecondUpdated(uint256 oldMaxChangePerSecond, uint256 newMaxChangePerSecond);
 
     // function _authorizeUpgrade(address) internal override onlyOwner {}
 
@@ -64,11 +66,13 @@ contract KassandraRules is IKassandraRules, Initializable, OwnableUpgradeable {
 
     function setMaxWeightChangePerSecond(uint256 maximumWeightChangePerSecond) external onlyOwner {
         require(maximumWeightChangePerSecond > 0, KacyErrors.ZERO_VALUE);
+        emit WeightChangePerSecondUpdated(_maxWeightChangePerSecond, maximumWeightChangePerSecond);
         _maxWeightChangePerSecond = maximumWeightChangePerSecond;
     }
 
     function setMinWeightChangeDuration(uint256 minimumWeightChangeDuration) external onlyOwner {
         require(minimumWeightChangeDuration > 0, KacyErrors.ZERO_VALUE);
+        emit WeightChangeDurationUpdated(_minWeightChangeDuration, minimumWeightChangeDuration);
         _minWeightChangeDuration = minimumWeightChangeDuration;
     }
 }
