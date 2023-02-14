@@ -40,7 +40,12 @@ contract KassandraControlledManagedPoolFactory is Ownable {
     IAuthorizedManagers public authorizedManagers;
     mapping(address => bool) private _isPoolFromFactory;
 
-    event ManagedPoolCreated(address indexed pool, address indexed poolController);
+    event KassandraPoolCreated(
+        address indexed caller,
+        address indexed pool,
+        address indexed poolController,
+        bytes32         vaultPoolId
+    );
 
     constructor(
         address factory,
@@ -130,7 +135,9 @@ contract KassandraControlledManagedPoolFactory is Ownable {
             fromInternalBalance: false
         });
 
-        _vault.joinPool(IManagedPool(pool).getPoolId(), address(this), msg.sender, request);
+        bytes32 poolId = IManagedPool(pool).getPoolId();
+        emit KassandraPoolCreated(msg.sender, pool, address(poolController), poolId);
+        _vault.joinPool(poolId, address(this), msg.sender, request);
 
         // Finally, initialize the controller
         poolController.initialize(pool);
@@ -139,7 +146,6 @@ contract KassandraControlledManagedPoolFactory is Ownable {
         _privateInvestors.setController(address(poolController));
 
         _isPoolFromFactory[pool] = true;
-        emit ManagedPoolCreated(pool, address(poolController));
     }
 
     /**
