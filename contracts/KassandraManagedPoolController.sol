@@ -62,6 +62,7 @@ contract KassandraManagedPoolController is BasePoolController, Proxy {
     FeesPercentages private _feesPercentages;
     bool private _isPrivatePool;
 
+    event JoinFeesUpdate(uint256 feesToManager, uint256 feesToReferral);
     /**
      * @dev Pass in the `BasePoolRights` and `ManagedPoolRights` structures, to form the complete set of
      * immutable rights. Then pass any parameters related to restrictions on those rights. For instance,
@@ -170,6 +171,20 @@ contract KassandraManagedPoolController is BasePoolController, Proxy {
 
     function getWhitelist() external view returns (IWhitelist) {
         return _whitelist;
+    }
+
+    /**
+     * @dev Update the fees paid for the manager and the broker
+     *
+     * @param feesPercentages: How much to pay yourself and a referrral in percetage
+     */
+    function setJoinFees(FeesPercentages memory feesPercentages) external onlyManager {
+        _require(
+            feesPercentages.feesToManager.add(feesPercentages.feesToReferral) < _MAX_INVEST_FEES,
+            Errors.MAX_SWAP_FEE_PERCENTAGE
+        );
+        _feesPercentages = feesPercentages;
+        emit JoinFeesUpdate(feesPercentages.feesToManager, feesPercentages.feesToReferral);
     }
 
     function setPublicPool() external virtual onlyManager withBoundPool {
