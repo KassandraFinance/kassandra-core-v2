@@ -43,6 +43,7 @@ contract KassandraControllerUpgradablePoolExtension {
 
     /*======================================== KassandraManagedPoolController ========================================*/
 
+    address private _strategist;
     IKassandraRules public kassandraRules;
     IWhitelist private _whitelist;
     address private _assetManager;
@@ -54,6 +55,11 @@ contract KassandraControllerUpgradablePoolExtension {
     /*******************************************************************************************************************
     *                                       End of Controller Storage Interface                                        *
     *                                             DO NOT CHANGE ABOVE THIS                                             *
+    *******************************************************************************************************************/
+
+    /*******************************************************************************************************************
+    *                                                 Extended Storage                                                 *
+    *                                     New storage variables for the controllers                                    *
     *******************************************************************************************************************/
 
     /*******************************************************************************************************************
@@ -80,6 +86,11 @@ contract KassandraControllerUpgradablePoolExtension {
         _;
     }
 
+    modifier onlyStrategist() {
+        _require(_strategist == msg.sender, Errors.SENDER_NOT_ALLOWED);
+        _;
+    }
+
     /**
      * @dev Getter for the canSetCircuitBreakers permission.
      */
@@ -92,7 +103,7 @@ contract KassandraControllerUpgradablePoolExtension {
         uint256 tokenToAddNormalizedWeight,
         uint256 tokenToAddBalance,
         address recipient
-    ) external onlyManager withBoundPool {
+    ) external onlyStrategist withBoundPool {
         bool isBlacklist = _whitelist.isBlacklist();
         bool isTokenWhitelisted = _whitelist.isTokenWhitelisted(address(tokenToAdd));
         bool isWhitelisted;
@@ -122,7 +133,7 @@ contract KassandraControllerUpgradablePoolExtension {
     function removeToken(
         IERC20 tokenToRemove,
         address sender
-    ) external onlyManager withBoundPool {
+    ) external onlyStrategist withBoundPool {
         IManagedPool managedPool = IManagedPool(pool);
         bytes32 poolId = managedPool.getPoolId();
 
@@ -160,7 +171,7 @@ contract KassandraControllerUpgradablePoolExtension {
         uint256 endTime,
         IERC20[] calldata tokens,
         uint256[] calldata endWeights
-    ) external onlyManager withBoundPool {
+    ) external onlyStrategist withBoundPool {
         // solhint-disable-next-line not-rely-on-time
         uint256 realStartTime = Math.max(block.timestamp, startTime);
         uint256 timedelta = endTime - realStartTime;

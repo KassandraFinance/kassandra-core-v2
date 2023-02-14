@@ -194,7 +194,7 @@ contract BasePoolController is IBasePoolController {
      *
      * Can only be called by the current manager.
      */
-    function transferOwnership(address newManager) external onlyManager {
+    function transferOwnership(address newManager) public virtual onlyManager {
         _require(canTransferOwnership(), Errors.FEATURE_DISABLED);
 
         _managerCandidate = newManager;

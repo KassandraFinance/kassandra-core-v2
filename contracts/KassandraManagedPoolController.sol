@@ -52,6 +52,8 @@ contract KassandraManagedPoolController is BasePoolController, Proxy {
         uint64 feesToReferral;
     }
 
+    /// @dev address allowed to manage the assets
+    address private _strategist;
     // The minimum weight change duration could be replaced with more sophisticated rate-limiting.
     IKassandraRules public kassandraRules;
     IWhitelist private _whitelist;
@@ -63,6 +65,8 @@ contract KassandraManagedPoolController is BasePoolController, Proxy {
     bool private _isPrivatePool;
 
     event JoinFeesUpdate(uint256 feesToManager, uint256 feesToReferral);
+    event StrategistChanged(address previousStrategist, address newStrategist);
+
     /**
      * @dev Pass in the `BasePoolRights` and `ManagedPoolRights` structures, to form the complete set of
      * immutable rights. Then pass any parameters related to restrictions on those rights. For instance,
@@ -83,6 +87,7 @@ contract KassandraManagedPoolController is BasePoolController, Proxy {
             feesPercentages.feesToManager.add(feesPercentages.feesToReferral) < _MAX_INVEST_FEES,
             Errors.MAX_SWAP_FEE_PERCENTAGE
         );
+        _strategist = manager;
         kassandraRules = IKassandraRules(kassandraRulesContract);
         _privateInvestors = privateInvestors;
         _isPrivatePool = isPrivatePool;
@@ -189,6 +194,11 @@ contract KassandraManagedPoolController is BasePoolController, Proxy {
         return _whitelist;
     }
 
+    function transferOwnership(address newManager) public override {
+        super.transferOwnership(newManager);
+        _strategist = newManager;
+    }
+
     /**
      * @dev Update the fees paid for the manager and the broker
      *
@@ -218,6 +228,18 @@ contract KassandraManagedPoolController is BasePoolController, Proxy {
 
     function isAllowedAddress(address member) external view virtual returns (bool) {
         return !_isPrivatePool || _privateInvestors.isInvestorAllowed(pool, member);
+    }
+
+    function getStrategist() external view returns (address) {
+        return _strategist;
+    }
+
+    /**
+     * @dev Change the address allowed to update assets.
+     */
+    function setStrategist(address newStrategist) external onlyManager {
+        emit StrategistChanged(_strategist, newStrategist);
+        _strategist = newStrategist;
     }
 
     /**
