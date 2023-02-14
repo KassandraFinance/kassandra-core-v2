@@ -25,6 +25,8 @@ contract AuthorizedManagers is IAuthorizedManagers, OwnableUpgradeable {
     mapping(address => bool) private _factories;
     mapping(address => uint8) private _manager;
 
+    event ManagerAllowanceUpdated(address indexed manager, uint256 poolsAmount);
+
     function initialize() public initializer {
         __Ownable_init();
     }
@@ -50,6 +52,7 @@ contract AuthorizedManagers is IAuthorizedManagers, OwnableUpgradeable {
     function setManager(address manager, uint8 qtdApproved) external onlyOwner {
         require(manager != address(0), KacyErrors.ZERO_ADDRESS);
         _manager[manager] = qtdApproved;
+        emit ManagerAllowanceUpdated(manager, qtdApproved);
     }
 
     function managerCreatedPool(address manager) external override {
