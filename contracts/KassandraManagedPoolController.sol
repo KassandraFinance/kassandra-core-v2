@@ -107,6 +107,22 @@ contract KassandraManagedPoolController is BasePoolController, Proxy {
     }
 
     /**
+     * @dev Getter for the fee paid when swapping in the pool.
+     */
+    function getSwapFeePercentage() external view returns (uint256) {
+        return IManagedPool(pool).getSwapFeePercentage();
+    }
+
+    /**
+     * @dev Getter for the fee paid when swapping in the pool.
+     */
+    function getManagementAumFeeParams() external view
+        returns (uint256 aumFeePercentage, uint256 lastCollectionTimestamp)
+    {
+        return IManagedPool(pool).getManagementAumFeeParams();
+    }
+
+    /**
      * @dev The Kassandra controller is partially a beacon proxy
      */
     function _implementation() internal view override returns (address) {
