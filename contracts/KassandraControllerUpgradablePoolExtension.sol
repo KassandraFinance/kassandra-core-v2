@@ -61,6 +61,15 @@ contract KassandraControllerUpgradablePoolExtension {
     *                                         New functions for the controllers                                        *
     *******************************************************************************************************************/
 
+    event JoinedPool(
+        address indexed recipient,
+        address indexed manager,
+        address indexed referrer,
+        uint256         amountToRecipient,
+        uint256         amountToManager,
+        uint256         amountToReferrer
+    );
+
     modifier withBoundPool {
         _require(pool != address(0), Errors.UNINITIALIZED_POOL_CONTROLLER);
         _;
@@ -245,6 +254,7 @@ contract KassandraControllerUpgradablePoolExtension {
         poolToken.safeTransfer(recipient, amountToRecipient);
         poolToken.safeTransfer(manager, amountToManager);
         poolToken.safeTransfer(referrer, amountToReferrer);
+        emit JoinedPool(recipient, manager, referrer, amountToRecipient, amountToManager, amountToReferrer);
 
         amountsIn = request.maxAmountsIn;
     }
@@ -292,6 +302,7 @@ contract KassandraControllerUpgradablePoolExtension {
         poolToken.safeTransfer(recipient, amountToRecipient);
         poolToken.safeTransfer(manager, amountToManager);
         poolToken.safeTransfer(referrer, amountToReferrer);
+        emit JoinedPool(recipient, manager, referrer, amountToRecipient, amountToManager, amountToReferrer);
 
         uint256 amountGiveBack = tokenIn.balanceOf(address(this));
         amountsIn = new uint256[](request.maxAmountsIn.length);
@@ -343,6 +354,7 @@ contract KassandraControllerUpgradablePoolExtension {
         poolToken.safeTransfer(recipient, amountToRecipient);
         poolToken.safeTransfer(manager, amountToManager);
         poolToken.safeTransfer(referrer, amountToReferrer);
+        emit JoinedPool(recipient, manager, referrer, amountToRecipient, amountToManager, amountToReferrer);
 
         amountsIn = request.maxAmountsIn;
 
