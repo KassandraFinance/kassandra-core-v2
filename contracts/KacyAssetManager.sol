@@ -17,6 +17,7 @@ pragma experimental ABIEncoderV2;
 
 import "@balancer-labs/v2-interfaces/contracts/pool-utils/IManagedPool.sol";
 import "@balancer-labs/v2-interfaces/contracts/solidity-utils/helpers/BalancerErrors.sol";
+import "@balancer-labs/v2-solidity-utils/contracts/openzeppelin/SafeERC20.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
 import "./interfaces/IKacyAssetManager.sol";
@@ -24,6 +25,8 @@ import "./interfaces/IPoolController.sol";
 import "./lib/KacyErrors.sol";
 
 contract KacyAssetManager is IKacyAssetManager, OwnableUpgradeable {
+    using SafeERC20 for IERC20;
+    
     /**
      * @dev Only the controller contract is allowed to modify its own pool
      */
@@ -43,11 +46,22 @@ contract KacyAssetManager is IKacyAssetManager, OwnableUpgradeable {
         IVault vault,
         bytes32 vaultPoolId
      ) external override onlyController(vaultPoolId) {
-        IVault.PoolBalanceOp[] memory ops = new IVault.PoolBalanceOp[](1);
-        ops[0].kind = IVault.PoolBalanceOpKind.DEPOSIT;
+        if (tokenToAdd.allowance(address(this), address(vault)) < tokenToAddBalance) {
+            tokenToAdd.safeApprove(address(vault), type(uint256).max);
+        }
+        
+        IVault.PoolBalanceOp[] memory ops = new IVault.PoolBalanceOp[](2);
+
+        ops[0].kind = IVault.PoolBalanceOpKind.UPDATE;
         ops[0].poolId = vaultPoolId;
         ops[0].token = tokenToAdd;
         ops[0].amount = tokenToAddBalance;
+
+        ops[1].kind = IVault.PoolBalanceOpKind.DEPOSIT;
+        ops[1].poolId = vaultPoolId;
+        ops[1].token = tokenToAdd;
+        ops[1].amount = tokenToAddBalance;
+
         vault.managePoolBalance(ops);
     }
 
@@ -55,13 +69,23 @@ contract KacyAssetManager is IKacyAssetManager, OwnableUpgradeable {
         IERC20 tokenToRemove,
         uint256 tokenToRemoveBalance,
         IVault vault,
-        bytes32 vaultPoolId
+        bytes32 vaultPoolId,
+        address recipient
      ) external override onlyController(vaultPoolId) {
-        IVault.PoolBalanceOp[] memory ops = new IVault.PoolBalanceOp[](1);
+        IVault.PoolBalanceOp[] memory ops = new IVault.PoolBalanceOp[](2);
+        
         ops[0].kind = IVault.PoolBalanceOpKind.WITHDRAW;
         ops[0].poolId = vaultPoolId;
         ops[0].token = tokenToRemove;
         ops[0].amount = tokenToRemoveBalance;
+
+        ops[1].kind = IVault.PoolBalanceOpKind.UPDATE;
+        ops[1].poolId = vaultPoolId;
+        ops[1].token = tokenToRemove;
+        ops[1].amount = 0;
+
         vault.managePoolBalance(ops);
+
+        tokenToRemove.safeTransfer(recipient, tokenToRemoveBalance);
     }
 }

@@ -29,6 +29,7 @@ interface IKacyAssetManager {
         IERC20 tokenToRemove,
         uint256 tokenToRemoveBalance,
         IVault vault,
-        bytes32 vaultPoolId
+        bytes32 vaultPoolId,
+        address recipient
         ) external;
 }

@@ -102,6 +102,7 @@ contract KassandraControllerUpgradablePoolExtension {
         IERC20 tokenToAdd,
         uint256 tokenToAddNormalizedWeight,
         uint256 tokenToAddBalance,
+        address sender,
         address recipient
     ) external onlyStrategist withBoundPool {
         bool isBlacklist = _whitelist.isBlacklist();
@@ -123,8 +124,8 @@ contract KassandraControllerUpgradablePoolExtension {
             FixedPoint.ONE.sub(tokenToAddNormalizedWeight)
         );
 
-        // First gets the tokens from msg.sender to the Asset Manager contract
-        tokenToAdd.safeTransferFrom(_manager, _assetManager, tokenToAddBalance);
+        // First gets the tokens from sender to the Asset Manager contract
+        tokenToAdd.safeTransferFrom(sender, _assetManager, tokenToAddBalance);
 
         managedPool.addToken(tokenToAdd, _assetManager, tokenToAddNormalizedWeight, mintAmount, recipient);
         IKacyAssetManager(_assetManager).addToken(tokenToAdd, tokenToAddBalance, _vault, managedPool.getPoolId());
@@ -132,7 +133,8 @@ contract KassandraControllerUpgradablePoolExtension {
 
     function removeToken(
         IERC20 tokenToRemove,
-        address sender
+        address sender,
+        address recipient
     ) external onlyStrategist withBoundPool {
         IManagedPool managedPool = IManagedPool(pool);
         bytes32 poolId = managedPool.getPoolId();
@@ -153,8 +155,8 @@ contract KassandraControllerUpgradablePoolExtension {
             tokenToRemoveNormalizedWeight = registeredTokensWeights[i - 1];
             break;
         }
-
-        IKacyAssetManager(_assetManager).removeToken(tokenToRemove, tokenToRemoveBalance, _vault, poolId);
+        
+        IKacyAssetManager(_assetManager).removeToken(tokenToRemove, tokenToRemoveBalance, _vault, poolId, recipient);
 
         // burnAmount = totalSupply * tokenToRemoveNormalizedWeight
         uint256 burnAmount = totalSupply.mulDown(tokenToRemoveNormalizedWeight);
