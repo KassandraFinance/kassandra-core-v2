@@ -199,13 +199,13 @@ describe("KassandraControlledManagedPoolFactory", () => {
             pool.feesSettings,
         );
 
-        const eventName = "ManagedPoolCreated";
+        const eventName = "KassandraPoolCreated";
         // event was emitted
         await expect(tx).emit(controllerFactory, eventName);
 
         const receipt = await tx.wait();
         const event = receipt.events?.find(event => event.event === eventName);
-        const [ managedPoolAddress, controllerAddress ] = (event?.args || [ethers.constants.AddressZero, ethers.constants.AddressZero]) as string[]
+        const [ , managedPoolAddress, controllerAddress ] = (event?.args || [ , ethers.constants.AddressZero, ethers.constants.AddressZero]) as string[]
         // pool was created and set as created
         expect(await controllerFactory.isPoolFromFactory(managedPoolAddress)).true;
 
@@ -247,11 +247,10 @@ describe("KassandraControlledManagedPoolFactory", () => {
             pool.feesSettings,
         );
 
-        const eventName = "ManagedPoolCreated";
+        const eventName = "KassandraPoolCreated";
         const receipt = await tx.wait();
         const event = receipt.events?.find(event => event.event === eventName);
-        const [ , controllerAddress ] = (event?.args || [ethers.constants.AddressZero, ethers.constants.AddressZero]) as string[]
-
+        const [ , , controllerAddress ] = (event?.args || [ , , ethers.constants.AddressZero]) as string[]
         const ManagedPoolController = await ethers.getContractFactory("KassandraManagedPoolController");
         const managedPoolController = ManagedPoolController.attach(controllerAddress);
         expect(await managedPoolController.isPrivatePool()).true;
