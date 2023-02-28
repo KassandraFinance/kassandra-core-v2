@@ -31,6 +31,10 @@ describe("KassandraControlledManagedPoolFactory", () => {
         const WhitelistDeployer = await ethers.getContractFactory("KassandraWhitelist");
         const whitelist = await upgrades.deployProxy(WhitelistDeployer) as KassandraWhitelist;
 
+        const ProxyInvest = await ethers.getContractFactory('ProxyInvest');
+        const proxyInvest = await ProxyInvest.deploy(vault.address, ethers.constants.AddressZero, privateInvestors.address);
+        await proxyInvest.deployed();
+
         const ControllerFactory = await ethers.getContractFactory("KassandraControlledManagedPoolFactory");
         const controllerFactory = await ControllerFactory.deploy(
             managedPoolFactory.address,
@@ -39,6 +43,7 @@ describe("KassandraControlledManagedPoolFactory", () => {
             vault.address,
             kassandraRules.address,
             assetManager.address,
+            proxyInvest.address
         ) as KassandraControlledManagedPoolFactory;
 
         await authorizedManagers.deployed();

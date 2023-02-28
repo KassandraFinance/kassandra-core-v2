@@ -57,8 +57,12 @@ describe("KassandraManagedPoolController", () => {
         ) as KassandraManagedPoolController;
 
         await kassandraManagedPoolController.deployed();
+
+        const ProxyInvest = await ethers.getContractFactory('ProxyInvest');
+        const proxyInvest = await ProxyInvest.deploy(VAULT_ADDRESS, ethers.constants.AddressZero, privateInvestors.address);
+        await proxyInvest.deployed();
         await managedPool.setOwner(kassandraManagedPoolController.address);
-        await kassandraManagedPoolController.initialize(managedPool.address);
+        await kassandraManagedPoolController["initialize(address,address)"](managedPool.address, proxyInvest.address);
 
         await privateInvestors.setController(kassandraManagedPoolController.address);
     })

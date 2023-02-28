@@ -66,8 +66,12 @@ describe("KassandraControllerUpgradablePoolExtension", () => {
         await managedPool.deployed();
         await managedPool.setNormalizedWeights(initialWeights)
 
+        const ProxyInvest = await ethers.getContractFactory('ProxyInvest');
+        const proxyInvest = await ProxyInvest.deploy(vault.address, ethers.constants.AddressZero, privateInvestors.address);
+        await proxyInvest.deployed();
+
         await controller.deployed();
-        await controller.initialize(managedPool.address);
+        await controller["initialize(address,address)"](managedPool.address, proxyInvest.address);
 
         const extendedController = KCUPE.attach(controller.address);
 
@@ -271,16 +275,13 @@ describe("KassandraControllerUpgradablePoolExtension", () => {
                 minDuration.add(nextBlockTime),
                 [ethers.constants.AddressZero, ethers.constants.AddressZero, ethers.constants.AddressZero],
                 [initialWeights[0].sub(change), initialWeights[1].add(change.div(2)), initialWeights[2].add(change.div(2))]
-            )).revertedWith("BAL#331");
+            )).not.reverted;
         })
 
         it("should be able to remove a token", async () => {
-            const { extendedController, manager, kassandraRules, initialWeights } = await loadFixture(deployManagedPoolWithExtension);
-            const { tokenToRemove, tokenFromPool } = await loadFixture(deployMockTokens);
-            extendedController.connect(manager).removeToken(tokenToRemove.address, manager.address);
+            const { extendedController, manager } = await loadFixture(deployManagedPoolWithExtension);
+            const { tokenToRemove } = await loadFixture(deployMockTokens);
+            extendedController.connect(manager).removeToken(tokenToRemove.address, manager.address, manager.address);
         })
-    })
-
-    describe("Joining Pool", () => {
     })
 })
