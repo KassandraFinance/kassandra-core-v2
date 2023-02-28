@@ -26,8 +26,6 @@ import "@balancer-labs/v2-solidity-utils/contracts/math/FixedPoint.sol";
 import "./interfaces/IKassandraManagedPoolController.sol";
 import "./interfaces/IPrivateInvestors.sol";
 
-import "hardhat/console.sol";
-
 contract ProxyInvest is Ownable {
     using SafeERC20 for IERC20;
     using FixedPoint for uint256;
@@ -37,17 +35,21 @@ contract ProxyInvest is Ownable {
         address indexed recipient,
         address indexed manager,
         address indexed referrer,
-        uint256         amountToRecipient,
-        uint256         amountToManager,
-        uint256         amountToReferrer
+        uint256 amountToRecipient,
+        uint256 amountToManager,
+        uint256 amountToReferrer
     );
 
-    enum JoinKind { INIT, EXACT_TOKENS_IN_FOR_BPT_OUT, TOKEN_IN_FOR_EXACT_BPT_OUT, ALL_TOKENS_IN_FOR_EXACT_BPT_OUT }
-    
-    IPrivateInvestors private _privateInvestors;
-    address           private _swapProvider;
-    IVault            private _vault;
+    enum JoinKind {
+        INIT,
+        EXACT_TOKENS_IN_FOR_BPT_OUT,
+        TOKEN_IN_FOR_EXACT_BPT_OUT,
+        ALL_TOKENS_IN_FOR_EXACT_BPT_OUT
+    }
 
+    IPrivateInvestors private _privateInvestors;
+    address private _swapProvider;
+    IVault private _vault;
 
     struct ProxyParams {
         address recipient;
@@ -94,8 +96,17 @@ contract ProxyInvest is Ownable {
             uint256[] memory amountsIn
         )
     {
-        _require(IKassandraManagedPoolController(params.controller).pool() != address(0), Errors.UNINITIALIZED_POOL_CONTROLLER);
-        
+        address _pool = IKassandraManagedPoolController(params.controller).pool();
+        _require(
+            _pool != address(0),
+            Errors.UNINITIALIZED_POOL_CONTROLLER
+        );
+        _require(
+            !IKassandraManagedPoolController(params.controller).isPrivatePool() ||
+                _privateInvestors.isInvestorAllowed(_pool, params.recipient),
+            Errors.SENDER_NOT_ALLOWED
+        );
+
         if (msg.value == 0) {
             params.tokenIn.safeTransferFrom(msg.sender, address(this), params.tokenAmountIn);
             if (params.tokenIn.allowance(address(this), _swapProvider) < params.tokenAmountIn) {
@@ -112,7 +123,9 @@ contract ProxyInvest is Ownable {
         uint256[] memory maxAmountsIn;
         IERC20[] memory tokens;
         {
-            (tokens, , ) = _vault.getPoolTokens(IManagedPool(IKassandraManagedPoolController(params.controller).pool()).getPoolId());
+            (tokens, , ) = _vault.getPoolTokens(
+                IManagedPool(IKassandraManagedPoolController(params.controller).pool()).getPoolId()
+            );
             uint256 size = tokens.length;
             maxAmountsInWithBPT = new uint256[](size);
             maxAmountsIn = new uint256[](size - 1);
@@ -121,8 +134,8 @@ contract ProxyInvest is Ownable {
                 if (tokens[i] == params.tokenExchange) {
                     maxAmountsInWithBPT[i] = params.tokenExchange.balanceOf(address(this));
                     maxAmountsIn[i - 1] = maxAmountsInWithBPT[i];
-                    if (params.tokenExchange.allowance(address(this), params.controller) < maxAmountsInWithBPT[i]) {
-                        params.tokenExchange.safeApprove(params.controller, type(uint256).max);
+                    if (params.tokenExchange.allowance(address(this), address(_vault)) < maxAmountsInWithBPT[i]) {
+                        params.tokenExchange.safeApprove(address(_vault), type(uint256).max);
                     }
                 }
             }
@@ -135,7 +148,14 @@ contract ProxyInvest is Ownable {
             fromInternalBalance: false
         });
 
-        return IKassandraManagedPoolController(params.controller).joinPool(params.recipient, params.referrer, request);
+        return
+            _joinPool(
+                params.recipient,
+                params.referrer,
+                params.controller,
+                IKassandraManagedPoolController(params.controller).pool(),
+                request
+            );
     }
 
     function joinPool(
@@ -156,8 +176,9 @@ contract ProxyInvest is Ownable {
         address _pool = IKassandraManagedPoolController(controller).pool();
         _require(_pool != address(0), Errors.UNINITIALIZED_POOL_CONTROLLER);
         _require(
-            !IKassandraManagedPoolController(controller).isPrivatePool() || 
-            _privateInvestors.isInvestorAllowed(_pool, recipient), Errors.SENDER_NOT_ALLOWED
+            !IKassandraManagedPoolController(controller).isPrivatePool() ||
+                _privateInvestors.isInvestorAllowed(_pool, recipient),
+            Errors.SENDER_NOT_ALLOWED
         );
 
         for (uint i = 0; i < request.assets.length; i++) {
@@ -170,24 +191,16 @@ contract ProxyInvest is Ownable {
             if (IERC20(tokenIn).allowance(address(this), address(_vault)) < request.maxAmountsIn[i]) {
                 IERC20(tokenIn).safeApprove(address(_vault), type(uint256).max);
             }
-
-            console.log(IERC20(tokenIn).balanceOf(address(this)));
         }
 
-        (uint64 feesToManager, uint64 feesToReferral) = IKassandraManagedPoolController(controller).getJoinFees();
-        address manager = IKassandraManagedPoolController(controller).getManager();
-        IKassandraManagedPoolController.FeesPercentages memory investFees = IKassandraManagedPoolController.FeesPercentages(feesToManager, feesToReferral);
-        
-        return _joinPool(recipient, referrer, manager, _pool, investFees, request);
+        return _joinPool(recipient, referrer, controller, _pool, request);
     }
 
-
-     function _joinPool(
+    function _joinPool(
         address recipient,
         address referrer,
-        address manager,
+        address controller,
         address pool,
-        IKassandraManagedPoolController.FeesPercentages memory investFees,
         IVault.JoinPoolRequest memory request
     )
         private
@@ -203,11 +216,11 @@ contract ProxyInvest is Ownable {
         IERC20 poolToken = IERC20(pool);
 
         if (joinKind == JoinKind.EXACT_TOKENS_IN_FOR_BPT_OUT) {
-            return _joinPoolExactIn(poolId, recipient, referrer, manager, poolToken, investFees, request);
+            return _joinPoolExactIn(poolId, recipient, referrer, controller, poolToken, request);
         } else if (joinKind == JoinKind.TOKEN_IN_FOR_EXACT_BPT_OUT) {
-            return _joinPoolExactOut(poolId, recipient, referrer, manager, poolToken, investFees, request);
+            return _joinPoolExactOut(poolId, recipient, referrer, controller, poolToken, request);
         } else if (joinKind == JoinKind.ALL_TOKENS_IN_FOR_EXACT_BPT_OUT) {
-            return _joinPoolAllTokensExactOut(poolId, recipient, referrer, manager, poolToken, investFees, request);
+            return _joinPoolAllTokensExactOut(poolId, recipient, referrer, controller, poolToken, request);
         }
     }
 
@@ -215,9 +228,8 @@ contract ProxyInvest is Ownable {
         bytes32 poolId,
         address recipient,
         address referrer,
-        address manager,
+        address controller,
         IERC20 poolToken,
-        IKassandraManagedPoolController.FeesPercentages memory investFees,
         IVault.JoinPoolRequest memory request
     )
         private
@@ -229,12 +241,14 @@ contract ProxyInvest is Ownable {
         )
     {
         (, , uint256 minBPTAmountOut) = abi.decode(request.userData, (uint256, uint256[], uint256));
+        (uint64 feesToManager, uint64 feesToReferral) = IKassandraManagedPoolController(controller).getJoinFees();
+        address manager = IKassandraManagedPoolController(controller).getManager();
 
         _vault.joinPool(poolId, address(this), address(this), request);
 
         uint256 amountOutBPT = poolToken.balanceOf(address(this));
-        amountToManager = amountOutBPT.mulDown(investFees.feesToManager);
-        amountToReferrer = amountOutBPT.mulDown(investFees.feesToReferral);
+        amountToManager = amountOutBPT.mulDown(feesToManager);
+        amountToReferrer = amountOutBPT.mulDown(feesToReferral);
         amountToRecipient = amountOutBPT.sub(amountToManager).sub(amountToReferrer);
         _require(amountToRecipient >= minBPTAmountOut, Errors.BPT_OUT_MIN_AMOUNT);
 
@@ -255,9 +269,8 @@ contract ProxyInvest is Ownable {
         bytes32 poolId,
         address recipient,
         address referrer,
-        address manager,
+        address controller,
         IERC20 poolToken,
-        IKassandraManagedPoolController.FeesPercentages memory investFees,
         IVault.JoinPoolRequest memory request
     )
         private
@@ -269,43 +282,39 @@ contract ProxyInvest is Ownable {
         )
     {
         uint256 indexToken;
-        ( , amountToRecipient, indexToken) = abi.decode(request.userData, (uint256, uint256, uint256));
-        uint256 bptAmount = amountToRecipient.divDown(
-            FixedPoint.ONE.sub(investFees.feesToManager).sub(investFees.feesToReferral)
-        );
-
-        IERC20 tokenIn = IERC20(address(request.assets[indexToken + 1]));
+        (, amountToRecipient, indexToken) = abi.decode(request.userData, (uint256, uint256, uint256));
+        uint256 bptAmount;
+        (amountToManager, amountToReferrer, bptAmount) = _calcExactOut(amountToRecipient, controller);
 
         request.userData = abi.encode(JoinKind.TOKEN_IN_FOR_EXACT_BPT_OUT, bptAmount, indexToken);
 
         _vault.joinPool(poolId, address(this), address(this), request);
 
+        IERC20 tokenIn = IERC20(address(request.assets[indexToken + 1]));
+
+        address manager = IKassandraManagedPoolController(controller).getManager();
         if (referrer == address(0)) {
             referrer = manager;
         }
-
-        amountToReferrer = bptAmount.mulDown(investFees.feesToReferral);
-        amountToManager = bptAmount.sub(amountToReferrer).sub(amountToRecipient);
 
         poolToken.safeTransfer(recipient, amountToRecipient);
         poolToken.safeTransfer(manager, amountToManager);
         poolToken.safeTransfer(referrer, amountToReferrer);
 
-        emit JoinedPool(recipient, manager, referrer, amountToRecipient, amountToManager, amountToReferrer);
-
         uint256 amountGiveBack = tokenIn.balanceOf(address(this));
         amountsIn = new uint256[](request.maxAmountsIn.length);
         amountsIn[indexToken + 1] = request.maxAmountsIn[indexToken + 1].sub(amountGiveBack);
         tokenIn.safeTransfer(recipient, amountGiveBack);
+
+        emit JoinedPool(recipient, manager, referrer, amountToRecipient, amountToManager, amountToReferrer);
     }
 
     function _joinPoolAllTokensExactOut(
         bytes32 poolId,
         address recipient,
         address referrer,
-        address manager,
+        address controller,
         IERC20 poolToken,
-        IKassandraManagedPoolController.FeesPercentages memory investFees,
         IVault.JoinPoolRequest memory request
     )
         private
@@ -317,20 +326,17 @@ contract ProxyInvest is Ownable {
         )
     {
         (, amountToRecipient) = abi.decode(request.userData, (uint256, uint256));
-        uint256 bptAmount = amountToRecipient.divDown(
-            FixedPoint.ONE.sub(investFees.feesToManager).sub(investFees.feesToReferral)
-        );
+        uint256 bptAmount;
+        (amountToManager, amountToReferrer, bptAmount) = _calcExactOut(amountToRecipient, controller);
 
         request.userData = abi.encode(JoinKind.ALL_TOKENS_IN_FOR_EXACT_BPT_OUT, bptAmount);
 
         _vault.joinPool(poolId, address(this), address(this), request);
 
+        address manager = IKassandraManagedPoolController(controller).getManager();
         if (referrer == address(0)) {
             referrer = manager;
         }
-
-        amountToReferrer = bptAmount.mulDown(investFees.feesToReferral);
-        amountToManager = bptAmount.sub(amountToReferrer).sub(amountToRecipient);
 
         poolToken.safeTransfer(recipient, amountToRecipient);
         poolToken.safeTransfer(manager, amountToManager);
@@ -346,5 +352,15 @@ contract ProxyInvest is Ownable {
             amountsIn[i] = request.maxAmountsIn[i].sub(amountGiveBack);
             tokenIn.safeTransfer(msg.sender, amountGiveBack);
         }
+    }
+
+    function _calcExactOut(
+        uint256 amountToRecipient,
+        address controller
+    ) private view returns (uint256 amountToManager, uint256 amountToReferrer, uint256 bptAmount) {
+        (uint64 feesToManager, uint64 feesToReferral) = IKassandraManagedPoolController(controller).getJoinFees();
+        bptAmount = amountToRecipient.divDown(FixedPoint.ONE.sub(feesToManager).sub(feesToReferral));
+        amountToReferrer = bptAmount.mulDown(feesToReferral);
+        amountToManager = bptAmount.sub(amountToReferrer).sub(amountToRecipient);
     }
 }
