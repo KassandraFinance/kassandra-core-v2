@@ -97,11 +97,11 @@ contract KassandraManagedPoolController is BasePoolController, Proxy {
         _whitelist = whitelist;
     }
 
-    function initialize(address poolAddress) public override {
+    function initialize(address poolAddress, address proxyInvest) public {
         super.initialize(poolAddress);
 
         IManagedPool(pool).setMustAllowlistLPs(true);
-        IManagedPool(pool).addAllowedAddress(address(this));
+        IManagedPool(pool).addAllowedAddress(proxyInvest);
     }
 
     /**
