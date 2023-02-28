@@ -35,6 +35,7 @@ contract KassandraControlledManagedPoolFactory is Ownable {
     address public immutable managedPoolFactory;
     address public immutable kassandraRules;
     address public immutable assetManager;
+    address public immutable proxyInvest;
     IVault private immutable _vault;
     IPrivateInvestors private immutable _privateInvestors;
     IAuthorizedManagers public authorizedManagers;
@@ -53,7 +54,8 @@ contract KassandraControlledManagedPoolFactory is Ownable {
         IAuthorizedManagers authorizationContract,
         IVault vault,
         address rules,
-        address assetManagerAddress
+        address assetManagerAddress,
+        address _proxyInvest
     ) {
         managedPoolFactory = factory;
         kassandraRules = rules;
@@ -61,6 +63,7 @@ contract KassandraControlledManagedPoolFactory is Ownable {
         _vault = vault;
         authorizedManagers = authorizationContract;
         _privateInvestors = privateInvestors;
+        proxyInvest = _proxyInvest;
     }
 
     /**
@@ -140,7 +143,7 @@ contract KassandraControlledManagedPoolFactory is Ownable {
         _vault.joinPool(poolId, address(this), msg.sender, request);
 
         // Finally, initialize the controller
-        poolController.initialize(pool);
+        poolController.initialize(pool, proxyInvest);
 
         authorizedManagers.managerCreatedPool(msg.sender);
         _privateInvestors.setController(address(poolController));
