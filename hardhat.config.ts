@@ -14,10 +14,11 @@ const config: HardhatUserConfig = {
   },
   networks: {
     hardhat: {
-      gas: 1800000,
+      allowUnlimitedContractSize: true,
+      gas: "auto",
       forking: {
         url: "https://polygon-rpc.com",
-        blockNumber: 36179673,
+        blockNumber: 39824641,
       }
     }
   }
