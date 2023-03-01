@@ -55,7 +55,7 @@ describe('ProxyInvest', () => {
     const privateInvestors = await upgrades.deployProxy(PrivateInvestors);
     await privateInvestors.deployed();
     const ProxyInvest = await ethers.getContractFactory('ProxyInvest');
-    proxyInvest = await ProxyInvest.deploy(VAULT_ADDRESS, SWAP_PROVIDER_ADDRESS_V5, privateInvestors.address) as ProxyInvest;
+    proxyInvest = await upgrades.deployProxy(ProxyInvest, [VAULT_ADDRESS, SWAP_PROVIDER_ADDRESS_V5, privateInvestors.address]) as ProxyInvest;
     await proxyInvest.deployed();
 
     await network.provider.request({
