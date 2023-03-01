@@ -38,7 +38,7 @@ contract KassandraControlledManagedPoolFactory is Ownable {
     address public immutable proxyInvest;
     IVault private immutable _vault;
     IPrivateInvestors private immutable _privateInvestors;
-    IAuthorizedManagers public authorizedManagers;
+    IAuthorizedManagers public immutable authorizedManagers;
     mapping(address => bool) private _isPoolFromFactory;
 
     event KassandraPoolCreated(
@@ -156,9 +156,5 @@ contract KassandraControlledManagedPoolFactory is Ownable {
      */
     function isPoolFromFactory(address pool) external view returns (bool) {
         return _isPoolFromFactory[pool];
-    }
-
-    function setAuthorizedManagers(IAuthorizedManagers authorizationContract) external onlyOwner {
-        authorizedManagers = authorizationContract;
     }
 }
