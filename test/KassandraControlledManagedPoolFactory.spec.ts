@@ -32,8 +32,7 @@ describe("KassandraControlledManagedPoolFactory", () => {
         const whitelist = await upgrades.deployProxy(WhitelistDeployer) as KassandraWhitelist;
 
         const ProxyInvest = await ethers.getContractFactory('ProxyInvest');
-        const proxyInvest = await ProxyInvest.deploy(vault.address, ethers.constants.AddressZero, privateInvestors.address);
-        await proxyInvest.deployed();
+        const proxyInvest = await upgrades.deployProxy(ProxyInvest, [vault.address, ethers.constants.AddressZero, privateInvestors.address]);
 
         const ControllerFactory = await ethers.getContractFactory("KassandraControlledManagedPoolFactory");
         const controllerFactory = await ControllerFactory.deploy(
@@ -111,22 +110,12 @@ describe("KassandraControlledManagedPoolFactory", () => {
         };
     }
 
-    it("should not allow someone else to change the AuthorizedManagers", async () => {
-        const { controllerFactory, manager } = await loadFixture(deployFactory);
-        await expect(controllerFactory.connect(manager).setAuthorizedManagers(manager.address)).revertedWith("BAL#426");
-    })
-
-    it("should allow onwer to change the AuthorizedManagers", async () => {
-        const { controllerFactory, manager } = await loadFixture(deployFactory);
-        await expect(controllerFactory.setAuthorizedManagers(manager.address)).not.reverted;
-        expect(await controllerFactory.authorizedManagers()).equal(manager.address);
-    })
-
     it("should have set correct addresses from constructor", async () => {
-        const { controllerFactory, managedPoolFactory, kassandraRules, assetManager } = await loadFixture(deployFactory);
+        const { controllerFactory, managedPoolFactory, kassandraRules, assetManager, authorizedManagers } = await loadFixture(deployFactory);
         expect(await controllerFactory.managedPoolFactory()).equal(managedPoolFactory.address);
         expect(await controllerFactory.kassandraRules()).equal(kassandraRules.address);
         expect(await controllerFactory.assetManager()).equal(assetManager.address);
+        expect(await controllerFactory.authorizedManagers()).equal(authorizedManagers.address)
     })
 
     it("should revert if manager is not allowed to create pools", async () => {
