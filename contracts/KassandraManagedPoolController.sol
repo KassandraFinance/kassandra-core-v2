@@ -74,7 +74,6 @@ contract KassandraManagedPoolController is BasePoolController, Proxy {
      */
     constructor(
         BasePoolRights memory baseRights,
-        FeesPercentages memory feesPercentages,
         address kassandraRulesContract,
         address manager,
         IPrivateInvestors privateInvestors,
@@ -83,23 +82,19 @@ contract KassandraManagedPoolController is BasePoolController, Proxy {
         address assetManager,
         IWhitelist whitelist
     ) BasePoolController(encodePermissions(baseRights), manager) {
-        _require(
-            feesPercentages.feesToManager.add(feesPercentages.feesToReferral) < _MAX_INVEST_FEES,
-            Errors.MAX_SWAP_FEE_PERCENTAGE
-        );
         _strategist = manager;
         kassandraRules = IKassandraRules(kassandraRulesContract);
         _privateInvestors = privateInvestors;
         _isPrivatePool = isPrivatePool;
         _vault = vault;
-        _feesPercentages = feesPercentages;
         _assetManager = assetManager;
         _whitelist = whitelist;
     }
 
-    function initialize(address poolAddress, address proxyInvest) public {
+    function initialize(address poolAddress, address proxyInvest, FeesPercentages memory feesPercentages) public {
         super.initialize(poolAddress);
 
+        _setJoinFees(feesPercentages);
         IManagedPool(pool).setMustAllowlistLPs(true);
         IManagedPool(pool).addAllowedAddress(proxyInvest);
     }
@@ -204,13 +199,22 @@ contract KassandraManagedPoolController is BasePoolController, Proxy {
      *
      * @param feesPercentages: How much to pay yourself and a referrral in percetage
      */
-    function setJoinFees(FeesPercentages memory feesPercentages) external onlyManager {
+    function _setJoinFees(FeesPercentages memory feesPercentages) internal {
         _require(
             feesPercentages.feesToManager.add(feesPercentages.feesToReferral) < _MAX_INVEST_FEES,
             Errors.MAX_SWAP_FEE_PERCENTAGE
         );
         _feesPercentages = feesPercentages;
         emit JoinFeesUpdate(feesPercentages.feesToManager, feesPercentages.feesToReferral);
+    }
+
+    /**
+     * @dev Update the fees paid for the manager and the broker
+     *
+     * @param feesPercentages: How much to pay yourself and a referrral in percetage
+     */
+    function setJoinFees(FeesPercentages memory feesPercentages) external onlyManager {
+        _setJoinFees(feesPercentages);
     }
 
     function setPublicPool() external virtual onlyManager withBoundPool {

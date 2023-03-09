@@ -87,7 +87,6 @@ contract KassandraControlledManagedPoolFactory is Ownable {
                 canChangeSwapFee: true,
                 canUpdateMetadata: true
             }),
-            feesSettings,
             kassandraRules,
             msg.sender,
             _privateInvestors,
@@ -143,7 +142,7 @@ contract KassandraControlledManagedPoolFactory is Ownable {
         _vault.joinPool(poolId, address(this), msg.sender, request);
 
         // Finally, initialize the controller
-        poolController.initialize(pool, proxyInvest);
+        poolController.initialize(pool, proxyInvest, feesSettings);
 
         authorizedManagers.managerCreatedPool(msg.sender);
         _privateInvestors.setController(address(poolController));
