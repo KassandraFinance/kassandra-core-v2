@@ -33,9 +33,10 @@ contract ProxyInvest is OwnableUpgradeable {
     using FixedPoint for uint64;
 
     event JoinedPool(
+        bytes32 indexed poolId,
         address indexed recipient,
-        address indexed manager,
-        address indexed referrer,
+        address manager,
+        address referrer,
         uint256 amountToRecipient,
         uint256 amountToManager,
         uint256 amountToReferrer
@@ -237,26 +238,28 @@ contract ProxyInvest is OwnableUpgradeable {
             uint256[] memory amountsIn
         )
     {
-        (, , uint256 minBPTAmountOut) = abi.decode(request.userData, (uint256, uint256[], uint256));
-        (uint64 feesToManager, uint64 feesToReferral) = IKassandraManagedPoolController(controller).getJoinFees();
         address manager = IKassandraManagedPoolController(controller).getManager();
+        {
+            (, , uint256 minBPTAmountOut) = abi.decode(request.userData, (uint256, uint256[], uint256));
+            (uint64 feesToManager, uint64 feesToReferral) = IKassandraManagedPoolController(controller).getJoinFees();
 
-        _vault.joinPool(poolId, address(this), address(this), request);
+            _vault.joinPool(poolId, address(this), address(this), request);
 
-        uint256 amountOutBPT = poolToken.balanceOf(address(this));
-        amountToManager = amountOutBPT.mulDown(feesToManager);
-        amountToReferrer = amountOutBPT.mulDown(feesToReferral);
-        amountToRecipient = amountOutBPT.sub(amountToManager).sub(amountToReferrer);
-        _require(amountToRecipient >= minBPTAmountOut, Errors.BPT_OUT_MIN_AMOUNT);
+            uint256 amountOutBPT = poolToken.balanceOf(address(this));
+            amountToManager = amountOutBPT.mulDown(feesToManager);
+            amountToReferrer = amountOutBPT.mulDown(feesToReferral);
+            amountToRecipient = amountOutBPT.sub(amountToManager).sub(amountToReferrer);
+            _require(amountToRecipient >= minBPTAmountOut, Errors.BPT_OUT_MIN_AMOUNT);
 
-        if (referrer == address(0)) {
-            referrer = manager;
+            if (referrer == address(0)) {
+                referrer = manager;
+            }
         }
 
+        emit JoinedPool(poolId, recipient, manager, referrer, amountToRecipient, amountToManager, amountToReferrer);
         poolToken.safeTransfer(recipient, amountToRecipient);
         poolToken.safeTransfer(manager, amountToManager);
         poolToken.safeTransfer(referrer, amountToReferrer);
-        emit JoinedPool(recipient, manager, referrer, amountToRecipient, amountToManager, amountToReferrer);
 
         amountsIn = request.maxAmountsIn;
     }
@@ -302,7 +305,7 @@ contract ProxyInvest is OwnableUpgradeable {
         poolToken.safeTransfer(recipient, amountToRecipient);
         poolToken.safeTransfer(manager, amountToManager);
         poolToken.safeTransfer(referrer, amountToReferrer);
-        emit JoinedPool(recipient, manager, referrer, amountToRecipient, amountToManager, amountToReferrer);
+        emit JoinedPool(poolId, recipient, manager, referrer, amountToRecipient, amountToManager, amountToReferrer);
 
         uint256 amountGiveBack = tokenIn.balanceOf(address(this));
         amountsIn = new uint256[](request.maxAmountsIn.length);
@@ -348,7 +351,7 @@ contract ProxyInvest is OwnableUpgradeable {
         poolToken.safeTransfer(recipient, amountToRecipient);
         poolToken.safeTransfer(manager, amountToManager);
         poolToken.safeTransfer(referrer, amountToReferrer);
-        emit JoinedPool(recipient, manager, referrer, amountToRecipient, amountToManager, amountToReferrer);
+        emit JoinedPool(poolId, recipient, manager, referrer, amountToRecipient, amountToManager, amountToReferrer);
 
         amountsIn = request.maxAmountsIn;
 
