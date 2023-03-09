@@ -67,6 +67,8 @@ contract KassandraControllerUpgradablePoolExtension {
     *                                         New functions for the controllers                                        *
     *******************************************************************************************************************/
 
+    event TokenAdded(IERC20 indexed token, uint256 amount);
+
     modifier withBoundPool {
         _require(pool != address(0), Errors.UNINITIALIZED_POOL_CONTROLLER);
         _;
@@ -118,6 +120,7 @@ contract KassandraControllerUpgradablePoolExtension {
         // First gets the tokens from sender to the Asset Manager contract
         tokenToAdd.safeTransferFrom(sender, _assetManager, tokenToAddBalance);
 
+        emit TokenAdded(tokenToAdd, tokenToAddBalance);
         managedPool.addToken(tokenToAdd, _assetManager, tokenToAddNormalizedWeight, mintAmount, recipient);
         IKacyAssetManager(_assetManager).addToken(tokenToAdd, tokenToAddBalance, _vault, managedPool.getPoolId());
     }
