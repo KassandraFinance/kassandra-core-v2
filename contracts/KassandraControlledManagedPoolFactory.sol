@@ -43,9 +43,18 @@ contract KassandraControlledManagedPoolFactory is Ownable {
 
     event KassandraPoolCreated(
         address indexed caller,
+        bytes32 indexed vaultPoolId,
         address indexed pool,
-        address indexed poolController,
-        bytes32         vaultPoolId
+        address         poolController,
+        address         whitelist,
+        bool            isPrivatePool
+    );
+
+    event KassandraPoolCreatedTokens(
+        bytes32 indexed vaultPoolId,
+        string          tokenName,
+        string          tokenSymbol,
+        IERC20[]        tokens
     );
 
     constructor(
@@ -107,38 +116,56 @@ contract KassandraControlledManagedPoolFactory is Ownable {
             tokenIn.safeTransferFrom(msg.sender, address(this), amountsIn[i]);
         }
 
-        ManagedPool.ManagedPoolParams memory params;
-        params.name = name;
-        params.symbol = symbol;
-        params.assetManagers = new address[](amountsIn.length);
+        IVault.JoinPoolRequest memory request;
 
-        uint256 size = amountsIn.length + 1;
-        IERC20[] memory assetsWithBPT = new IERC20[](size);
-        uint256[] memory amountsInWithBPT = new uint256[](size);
         {
-            uint256 j = 1;
-            for (uint256 i = 0; i < amountsIn.length; i++) {
-                assetsWithBPT[j] = settingsParams.tokens[i];
-                amountsInWithBPT[j] = amountsIn[i];
-                params.assetManagers[i] = assetManager;
-                j++;
+            ManagedPool.ManagedPoolParams memory params;
+            params.name = name;
+            params.symbol = symbol;
+            params.assetManagers = new address[](amountsIn.length);
+
+            uint256 size = amountsIn.length + 1;
+            IERC20[] memory assetsWithBPT = new IERC20[](size);
+            uint256[] memory amountsInWithBPT = new uint256[](size);
+            {
+                uint256 j = 1;
+                for (uint256 i = 0; i < amountsIn.length; i++) {
+                    assetsWithBPT[j] = settingsParams.tokens[i];
+                    amountsInWithBPT[j] = amountsIn[i];
+                    params.assetManagers[i] = assetManager;
+                    j++;
+                }
             }
+
+            // Let the base factory deploy the pool (owner is the controller)
+            pool = ManagedPoolFactory(managedPoolFactory).create(params, settingsParams, address(poolController));
+            assetsWithBPT[0] = IERC20(pool);
+            amountsInWithBPT[0] = type(uint256).max;
+
+            request = IVault.JoinPoolRequest({
+                assets: _asIAsset(assetsWithBPT),
+                maxAmountsIn: amountsInWithBPT,
+                userData: abi.encode(0, amountsIn),
+                fromInternalBalance: false
+            });
         }
 
-        // Let the base factory deploy the pool (owner is the controller)
-        pool = ManagedPoolFactory(managedPoolFactory).create(params, settingsParams, address(poolController));
-        assetsWithBPT[0] = IERC20(pool);
-        amountsInWithBPT[0] = type(uint256).max;
-
-        IVault.JoinPoolRequest memory request = IVault.JoinPoolRequest({
-            assets: _asIAsset(assetsWithBPT),
-            maxAmountsIn: amountsInWithBPT,
-            userData: abi.encode(0, amountsIn),
-            fromInternalBalance: false
-        });
-
         bytes32 poolId = IManagedPool(pool).getPoolId();
-        emit KassandraPoolCreated(msg.sender, pool, address(poolController), poolId);
+        emit KassandraPoolCreated(
+            msg.sender,
+            poolId,
+            pool,
+            address(poolController),
+            address(whitelist),
+            isPrivatePool
+        );
+        emit KassandraPoolCreatedTokens(
+            poolId,
+            name,
+            symbol,
+            settingsParams.tokens
+        );
+
         _vault.joinPool(poolId, address(this), msg.sender, request);
 
         // Finally, initialize the controller
