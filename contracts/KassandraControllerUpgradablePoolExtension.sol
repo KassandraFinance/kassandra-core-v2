@@ -51,6 +51,7 @@ contract KassandraControllerUpgradablePoolExtension {
     IPrivateInvestors private _privateInvestors;
     KassandraManagedPoolController.FeesPercentages private _feesPercentages;
     bool private _isPrivatePool;
+    uint256 private _kassandraAumFee;
 
     /*******************************************************************************************************************
     *                                       End of Controller Storage Interface                                        *
@@ -190,5 +191,30 @@ contract KassandraControllerUpgradablePoolExtension {
         }
 
         managedPool.updateWeightsGradually(realStartTime, endTime, tokens, endWeights);
+    }
+
+
+    function getManagementAumFee() external view 
+        returns (uint256 managerAumFeePercentage, uint256 kassandraAumFeePercentage) 
+    {
+        (uint256 aumFeePercentage, ) = IManagedPool(pool).getManagementAumFeeParams();
+        managerAumFeePercentage = aumFeePercentage.sub(_kassandraAumFee);
+        kassandraAumFeePercentage = _kassandraAumFee;
+    }
+
+    /**
+     * @dev Transfer any BPT management fees to manager and kassandra.
+     */
+    function withdrawCollectedManagementFees() external virtual withBoundPool returns (uint256 feesToManager, uint256 feesToKassandra) {
+        address _msgSender = msg.sender;
+        _require(_msgSender == _manager || _msgSender == kassandraRules.owner(), Errors.SENDER_NOT_ALLOWED);
+        (uint256 aumFeePercentage, ) = IManagedPool(pool).getManagementAumFeeParams();
+        uint256 totalCollected = IERC20(pool).balanceOf(address(this));
+        feesToKassandra = totalCollected.mulDown(_kassandraAumFee.divDown(aumFeePercentage));
+        IERC20(pool).safeTransfer(kassandraRules.owner(), feesToKassandra);
+        if (aumFeePercentage > _kassandraAumFee) {
+            feesToManager = totalCollected.sub(feesToKassandra);
+            IERC20(pool).safeTransfer(_manager, feesToManager);
+        }
     }
 }

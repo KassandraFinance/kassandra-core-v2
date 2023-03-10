@@ -38,7 +38,7 @@ contract ManagedPoolFactoryMock {
         }
 
         require(!settingsParams.mustAllowlistLPs, "Pool must be set as private");
-        ManagedPoolMock pool = new ManagedPoolMock(owner);
+        ManagedPoolMock pool = new ManagedPoolMock(owner, settingsParams.managementAumFeePercentage);
         _vault.mockSavePoolId(pool.getPoolId());
         return address(pool);
     }

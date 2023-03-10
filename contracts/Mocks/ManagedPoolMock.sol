@@ -15,13 +15,20 @@
 pragma solidity >=0.7.0 <0.9.0;
 
 import "@balancer-labs/v2-interfaces/contracts/solidity-utils/openzeppelin/IERC20.sol";
+import "@balancer-labs/v2-solidity-utils/contracts/openzeppelin/ERC20.sol";
 
-contract ManagedPoolMock {
+contract ManagedPoolMock is ERC20 {
     address private _owner;
     uint256[] private _normalizedWeights;
+    uint256  private _aumFee;
 
-    constructor(address owner) {
+    constructor(address owner, uint256 aumFee) ERC20("Managed Pool", "KMP") {
         _owner = owner;
+        _aumFee = aumFee;
+    }
+
+    function mint(address to, uint256 amount) external {
+        _mint(to, amount);
     }
 
     function setOwner(address owner) external {
@@ -62,5 +69,9 @@ contract ManagedPoolMock {
 
     function addAllowedAddress(address member) external {
 
+    }
+
+    function getManagementAumFeeParams() external view returns (uint256, uint256) {
+        return (_aumFee, block.timestamp);
     }
 }

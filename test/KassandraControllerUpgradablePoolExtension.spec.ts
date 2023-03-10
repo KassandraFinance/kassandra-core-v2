@@ -11,7 +11,11 @@ import {
 
 describe("KassandraControllerUpgradablePoolExtension", () => {
     async function deployManagedPoolWithExtension() {
-        const [, manager] = await ethers.getSigners();
+        const [, manager, investor] = await ethers.getSigners();
+
+        const kassandraAumFee = ethers.BigNumber.from(0.005e18.toString());
+        const managerAumFee = ethers.BigNumber.from(0.005e18.toString());
+        const totalAumFee = kassandraAumFee.add(managerAumFee);
 
         const KCUPE = await ethers.getContractFactory("KassandraControllerUpgradablePoolExtension");
         const kcupe = await KCUPE.deploy();
@@ -21,6 +25,7 @@ describe("KassandraControllerUpgradablePoolExtension", () => {
             kcupe.address,
             ethers.utils.parseEther("0.02").div(360),
             time.duration.hours(1),
+            kassandraAumFee
         ]) as KassandraRules;
 
         const AssetManagerDeployer = await ethers.getContractFactory("KacyAssetManager");
@@ -53,6 +58,7 @@ describe("KassandraControllerUpgradablePoolExtension", () => {
             vault.address,
             assetManager.address,
             whitelist.address,
+            kassandraAumFee
         ) as KassandraManagedPoolController;
 
         const initialWeights = [
@@ -62,20 +68,31 @@ describe("KassandraControllerUpgradablePoolExtension", () => {
         ];
 
         const ManagedPoolDeployer = await ethers.getContractFactory("ManagedPoolMock");
-        const managedPool = await ManagedPoolDeployer.deploy(controller.address);
+        const managedPool = await ManagedPoolDeployer.deploy(controller.address, totalAumFee);
         await managedPool.deployed();
         await managedPool.setNormalizedWeights(initialWeights)
-
+        
         const ProxyInvest = await ethers.getContractFactory('ProxyInvest');
-        const proxyInvest = await ProxyInvest.deploy(vault.address, ethers.constants.AddressZero, privateInvestors.address);
+        const proxyInvest = await upgrades.deployProxy(ProxyInvest, [vault.address, ethers.constants.AddressZero, privateInvestors.address]);
         await proxyInvest.deployed();
-
+        
         await controller.deployed();
         await controller["initialize(address,address)"](managedPool.address, proxyInvest.address);
-
+        
         const extendedController = KCUPE.attach(controller.address);
+        await managedPool.mint(extendedController.address, ethers.utils.parseEther('10'));
 
-        return { extendedController, manager, kassandraRules, initialWeights };
+        return { 
+            extendedController,
+            manager, 
+            kassandraRules, 
+            initialWeights, 
+            kassandraAumFee, 
+            managerAumFee, 
+            managedPool,
+            totalAumFee,
+            investor
+        };
     }
 
     /*async function deployManagedPoolWithExtensionAndRealVault() {
@@ -282,6 +299,78 @@ describe("KassandraControllerUpgradablePoolExtension", () => {
             const { extendedController, manager } = await loadFixture(deployManagedPoolWithExtension);
             const { tokenToRemove } = await loadFixture(deployMockTokens);
             extendedController.connect(manager).removeToken(tokenToRemove.address, manager.address, manager.address);
+        })
+    })
+
+    describe("Withdraw collected aum fee", () => {
+        it("should be able to get aum fees", async () => {
+            const { extendedController, kassandraAumFee, managerAumFee } = await loadFixture(deployManagedPoolWithExtension)
+
+            const { kassandraAumFeePercentage, managerAumFeePercentage } = await extendedController.getManagementAumFee();
+
+            expect(kassandraAumFeePercentage).equal(kassandraAumFee);
+            expect(managerAumFeePercentage).equal(managerAumFee)
+        })
+
+        it("should revert if caller is not the manager or kassandra", async () => {
+            const { extendedController, investor } = await loadFixture(deployManagedPoolWithExtension)
+
+            await expect(extendedController.connect(investor).withdrawCollectedManagementFees()).revertedWith("BAL#401")
+        })
+
+        it("should returns aum fees if execute static call", async () => {
+            const { extendedController, kassandraAumFee, managedPool, totalAumFee, manager } = await loadFixture(deployManagedPoolWithExtension)
+            const one = 1e18.toString()
+            const totalCollectedFee = await managedPool.balanceOf(extendedController.address)
+
+            const feesKassandra = totalCollectedFee.mul(kassandraAumFee.mul(one).div(totalAumFee)).div(one)
+            const feesManager = totalCollectedFee.sub(feesKassandra)
+
+            const { feesToManager, feesToKassandra } = await extendedController
+                .connect(manager)
+                .callStatic.withdrawCollectedManagementFees();
+
+            expect(feesToKassandra.eq(feesKassandra)).true;
+            expect(feesToManager.eq(feesManager)).true;
+        })
+
+        it("should be able manager execute withdraw collected aum fees", async () => {
+            const { extendedController, kassandraAumFee, managedPool, totalAumFee, manager, kassandraRules } = await loadFixture(deployManagedPoolWithExtension)
+            const one = 1e18.toString()
+            const totalCollectedFee = await managedPool.balanceOf(extendedController.address)
+
+            const feesKassandra = totalCollectedFee.mul(kassandraAumFee.mul(one).div(totalAumFee)).div(one)
+            const feesManager = totalCollectedFee.sub(feesKassandra)
+
+            await extendedController
+                .connect(manager)
+                .withdrawCollectedManagementFees();
+
+            const feesToKassandra = await managedPool.balanceOf(await kassandraRules.owner())
+            const feesToManager = await managedPool.balanceOf(manager.address)
+
+            expect(feesToKassandra.eq(feesKassandra)).true;
+            expect(feesToManager.eq(feesManager)).true;
+        })
+
+        it("should allow kassandra to withdraw collected aum fees", async () => {
+            const { extendedController, kassandraAumFee, managedPool, totalAumFee, manager, kassandraRules } = await loadFixture(deployManagedPoolWithExtension)
+            const kassandra = await ethers.getSigner(await kassandraRules.owner())
+            const one = 1e18.toString()
+            const totalCollectedFee = await managedPool.balanceOf(extendedController.address)
+
+            const feesKassandra = totalCollectedFee.mul(kassandraAumFee.mul(one).div(totalAumFee)).div(one)
+            const feesManager = totalCollectedFee.sub(feesKassandra)
+
+            await extendedController
+                .connect(kassandra)
+                .withdrawCollectedManagementFees();
+
+            const feesToKassandra = await managedPool.balanceOf((await kassandraRules.owner()))
+            const feesToManager = await managedPool.balanceOf(manager.address)
+
+            expect(feesToKassandra.eq(feesKassandra)).true;
+            expect(feesToManager.eq(feesManager)).true;
         })
     })
 })

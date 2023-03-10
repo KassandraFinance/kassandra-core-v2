@@ -13,13 +13,17 @@ describe("KassandraManagedPoolController", () => {
     let owner: SignerWithAddress;
     let manager: SignerWithAddress;
     let investor: SignerWithAddress;
+    let kassandra: SignerWithAddress;
     const fees = {
         feesToManager: ethers.utils.parseEther("0.015"),
         feesToReferral: ethers.utils.parseEther("0.01")
     }
+    const kassandraAumFee = ethers.BigNumber.from(0.05e18.toString());
+    const managerAumFee = ethers.BigNumber.from(0.005e18.toString());
+    const totalAumFee = kassandraAumFee.add(managerAumFee);
 
     before(async () => {
-        [owner, manager, investor] = await ethers.getSigners();
+        [owner, manager, investor, kassandra] = await ethers.getSigners();
 
         const PrivateInvestors = await ethers.getContractFactory("PrivateInvestors");
         privateInvestors = await upgrades.deployProxy(PrivateInvestors) as PrivateInvestors;
@@ -27,7 +31,7 @@ describe("KassandraManagedPoolController", () => {
         await privateInvestors.setFactory(owner.address);
 
         const ManagedPool = await ethers.getContractFactory("ManagedPoolMock");
-        managedPool = await ManagedPool.deploy(owner.address) as ManagedPoolMock;
+        managedPool = await ManagedPool.deploy(owner.address, totalAumFee) as ManagedPoolMock;
         await managedPool.deployed();
 
         const baseRights = {
@@ -38,7 +42,7 @@ describe("KassandraManagedPoolController", () => {
 
         const minWeightChangeDuration = time.duration.days(1);
         const KassandraRules = await ethers.getContractFactory("KassandraRules");
-        const kassandraRules = await upgrades.deployProxy(KassandraRules, [ethers.constants.AddressZero, 1000, minWeightChangeDuration]);
+        const kassandraRules = await upgrades.deployProxy(KassandraRules, [ethers.constants.AddressZero, 1000, minWeightChangeDuration, kassandraAumFee]);
 
         const Whitelist = await ethers.getContractFactory("KassandraWhitelist");
         const whitelist = await upgrades.deployProxy(Whitelist);
@@ -53,13 +57,16 @@ describe("KassandraManagedPoolController", () => {
             true,
             VAULT_ADDRESS,
             ethers.constants.AddressZero,
-            whitelist.address
+            whitelist.address,
+            kassandraAumFee
         ) as KassandraManagedPoolController;
 
         await kassandraManagedPoolController.deployed();
 
+        await managedPool.mint(kassandraManagedPoolController.address, ethers.utils.parseEther('10'));
+
         const ProxyInvest = await ethers.getContractFactory('ProxyInvest');
-        const proxyInvest = await ProxyInvest.deploy(VAULT_ADDRESS, ethers.constants.AddressZero, privateInvestors.address);
+        const proxyInvest = await upgrades.deployProxy(ProxyInvest, [VAULT_ADDRESS, ethers.constants.AddressZero, privateInvestors.address])
         await proxyInvest.deployed();
         await managedPool.setOwner(kassandraManagedPoolController.address);
         await kassandraManagedPoolController["initialize(address,address)"](managedPool.address, proxyInvest.address);
@@ -128,8 +135,15 @@ describe("KassandraManagedPoolController", () => {
 
         it("should be able to get the join fees", async () => {
             const [ managerFee, referrerFee ] = await kassandraManagedPoolController.getJoinFees();
+
             expect(managerFee).equal(fees.feesToManager);
             expect(referrerFee).equal(fees.feesToReferral);
+        })
+
+        it("should be able to get total aum fee", async () => {
+            const { aumFeePercentage } = await kassandraManagedPoolController.getManagementAumFeeParams();
+
+            expect(aumFeePercentage).equal(totalAumFee);
         })
     })
 

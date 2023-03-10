@@ -29,18 +29,5 @@ interface IKassandraManagedPoolController {
 
     function isPrivatePool() external view returns (bool);
 
-    function joinPool(
-        address recipient,
-        address referrer,
-        IVault.JoinPoolRequest memory request
-    )
-        external
-        returns (
-            uint256 amountToRecipient,
-            uint256 amountToReferrer,
-            uint256 amountToManager,
-            uint256[] memory amountsIn
-        );
-    
     function pool() external returns (address);
 }

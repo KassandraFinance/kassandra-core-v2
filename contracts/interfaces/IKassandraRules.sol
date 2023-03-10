@@ -15,10 +15,16 @@
 pragma solidity ^0.7.0;
 pragma experimental ABIEncoderV2;
 
-interface IKassandraRules {
+interface IKassandraRulesImp {
     function controllerExtender() external view returns(address);
 
     function maxWeightChangePerSecond() external view returns(uint256);
 
     function minWeightChangeDuration() external view returns(uint256);
+
+    function kassandraAumFeePercentage() external view returns(uint256);
+}
+
+interface IKassandraRules is IKassandraRulesImp {
+    function owner() external view returns(address);
 }

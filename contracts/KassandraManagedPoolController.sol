@@ -25,7 +25,6 @@ import "./interfaces/IKacyAssetManager.sol";
 import "./interfaces/IKassandraRules.sol";
 import "./interfaces/IWhitelist.sol";
 import "./interfaces/IPrivateInvestors.sol";
-import "./interfaces/IKassandraManagedPoolController.sol";
 
 import "./BasePoolController.sol";
 
@@ -60,9 +59,9 @@ contract KassandraManagedPoolController is BasePoolController, Proxy {
     address private _assetManager;
     IVault private _vault;
     IPrivateInvestors private _privateInvestors;
-
     FeesPercentages private _feesPercentages;
     bool private _isPrivatePool;
+    uint256 private _kassandraAumFee;
 
     event JoinFeesUpdate(uint256 feesToManager, uint256 feesToReferral);
     event StrategistChanged(address previousStrategist, address newStrategist);
@@ -80,7 +79,8 @@ contract KassandraManagedPoolController is BasePoolController, Proxy {
         bool isPrivatePool,
         IVault vault,
         address assetManager,
-        IWhitelist whitelist
+        IWhitelist whitelist,
+        uint256 kassandraAumFee
     ) BasePoolController(encodePermissions(baseRights), manager) {
         _strategist = manager;
         kassandraRules = IKassandraRules(kassandraRulesContract);
@@ -89,6 +89,7 @@ contract KassandraManagedPoolController is BasePoolController, Proxy {
         _vault = vault;
         _assetManager = assetManager;
         _whitelist = whitelist;
+        _kassandraAumFee = kassandraAumFee;
     }
 
     function initialize(address poolAddress, address proxyInvest, FeesPercentages memory feesPercentages) public {
@@ -244,12 +245,5 @@ contract KassandraManagedPoolController is BasePoolController, Proxy {
     function setStrategist(address newStrategist) external onlyManager {
         emit StrategistChanged(_strategist, newStrategist);
         _strategist = newStrategist;
-    }
-
-    /**
-     * @dev Transfer any BPT management fees from this contract to the recipient.
-     */
-    function withdrawCollectedManagementFees(address recipient) external virtual onlyManager withBoundPool {
-        IERC20(pool).safeTransfer(recipient, IERC20(pool).balanceOf(address(this)));
     }
 }
