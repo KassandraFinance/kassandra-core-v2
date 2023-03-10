@@ -25,8 +25,10 @@ describe("KassandraControlledManagedPoolFactory", () => {
         const AuthorizedManagersDeployer = await ethers.getContractFactory("AuthorizedManagers");
         const authorizedManagers = await upgrades.deployProxy(AuthorizedManagersDeployer) as AuthorizedManagers;
 
+        const kassandraAumFee = 0.005e18.toString()
+        
         const KassandraRulesDeployer = await ethers.getContractFactory("KassandraRules");
-        const kassandraRules = await upgrades.deployProxy(KassandraRulesDeployer, [owner.address, 0, 0]) as KassandraRules;
+        const kassandraRules = await upgrades.deployProxy(KassandraRulesDeployer, [owner.address, 0, 0, kassandraAumFee]) as KassandraRules;
 
         const WhitelistDeployer = await ethers.getContractFactory("KassandraWhitelist");
         const whitelist = await upgrades.deployProxy(WhitelistDeployer) as KassandraWhitelist;
@@ -92,6 +94,8 @@ describe("KassandraControlledManagedPoolFactory", () => {
             },
         };
 
+
+
         return {
             controllerFactory,
             pool,
@@ -107,15 +111,17 @@ describe("KassandraControlledManagedPoolFactory", () => {
             matic,
             degen,
             vault,
+            kassandraAumFee
         };
     }
 
     it("should have set correct addresses from constructor", async () => {
-        const { controllerFactory, managedPoolFactory, kassandraRules, assetManager, authorizedManagers } = await loadFixture(deployFactory);
+        const { controllerFactory, managedPoolFactory, kassandraRules, assetManager, authorizedManagers, kassandraAumFee } = await loadFixture(deployFactory);
         expect(await controllerFactory.managedPoolFactory()).equal(managedPoolFactory.address);
         expect(await controllerFactory.kassandraRules()).equal(kassandraRules.address);
         expect(await controllerFactory.assetManager()).equal(assetManager.address);
-        expect(await controllerFactory.authorizedManagers()).equal(authorizedManagers.address)
+        expect(await controllerFactory.authorizedManagers()).equal(authorizedManagers.address);
+        expect(await controllerFactory.kassandraAumFeePercentage()).equal(kassandraAumFee);
     })
 
     it("should revert if manager is not allowed to create pools", async () => {

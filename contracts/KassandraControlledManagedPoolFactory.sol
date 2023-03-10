@@ -16,6 +16,7 @@ pragma solidity ^0.7.0;
 pragma experimental ABIEncoderV2;
 
 import "@balancer-labs/v2-solidity-utils/contracts/openzeppelin/Ownable.sol";
+import "@balancer-labs/v2-solidity-utils/contracts/openzeppelin/SafeMath.sol";
 import "../balancer-v2-submodule/pkg/pool-weighted/contracts/managed/ManagedPoolFactory.sol";
 import "../balancer-v2-submodule/pkg/pool-weighted/contracts/managed/ManagedPool.sol";
 
@@ -30,15 +31,18 @@ import "./KassandraManagedPoolController.sol";
  */
 contract KassandraControlledManagedPoolFactory is Ownable {
     using SafeERC20 for IERC20;
+    using SafeMath for uint256;
 
     // The address of the ManagedPoolFactory used to deploy the ManagedPool
     address public immutable managedPoolFactory;
     address public immutable kassandraRules;
     address public immutable assetManager;
     address public immutable proxyInvest;
+
     IVault private immutable _vault;
     IPrivateInvestors private immutable _privateInvestors;
     IAuthorizedManagers public immutable authorizedManagers;
+
     mapping(address => bool) private _isPoolFromFactory;
 
     event KassandraPoolCreated(
@@ -90,6 +94,8 @@ contract KassandraControlledManagedPoolFactory is Ownable {
         _require(authorizedManagers.canCreatePool(msg.sender), Errors.SENDER_NOT_ALLOWED);
         _require(amountsIn.length == settingsParams.tokens.length, Errors.INPUT_LENGTH_MISMATCH);
 
+        uint256 kassandraAumFee = IKassandraRules(kassandraRules).kassandraAumFeePercentage();
+
         poolController = new KassandraManagedPoolController(
             BasePoolController.BasePoolRights({
                 canTransferOwnership: true,
@@ -102,7 +108,8 @@ contract KassandraControlledManagedPoolFactory is Ownable {
             isPrivatePool,
             _vault,
             assetManager,
-            whitelist
+            whitelist,
+            kassandraAumFee
         );
 
         settingsParams.mustAllowlistLPs = false;
@@ -137,6 +144,7 @@ contract KassandraControlledManagedPoolFactory is Ownable {
                 }
             }
 
+            settingsParams.managementAumFeePercentage = settingsParams.managementAumFeePercentage.add(kassandraAumFee);
             // Let the base factory deploy the pool (owner is the controller)
             pool = ManagedPoolFactory(managedPoolFactory).create(params, settingsParams, address(poolController));
             assetsWithBPT[0] = IERC20(pool);
@@ -182,5 +190,9 @@ contract KassandraControlledManagedPoolFactory is Ownable {
      */
     function isPoolFromFactory(address pool) external view returns (bool) {
         return _isPoolFromFactory[pool];
+    }
+
+    function kassandraAumFeePercentage() external view returns (uint256) {
+        return IKassandraRules(kassandraRules).kassandraAumFeePercentage();
     }
 }
