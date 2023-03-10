@@ -19,7 +19,7 @@ describe('PrivateInvestors', () => {
     const privateInvestors = await upgrades.deployProxy(PrivateInvestors) as PrivateInvestors;
 
     const ManagedPool = await ethers.getContractFactory("ManagedPoolMock");
-    const managedPool = await ManagedPool.deploy(ownerPrivateInvestor.address);
+    const managedPool = await ManagedPool.deploy(ownerPrivateInvestor.address, '0');
 
     const BaseControllerMock = await ethers.getContractFactory("BaseControllerMock");
     const controller = await BaseControllerMock.deploy(managedPool.address);

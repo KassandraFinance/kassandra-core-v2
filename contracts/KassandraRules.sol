@@ -21,10 +21,11 @@ import "@openzeppelin/contracts-upgradeable/proxy/Initializable.sol";
 import "./interfaces/IKassandraRules.sol";
 import "./lib/KacyErrors.sol";
 
-contract KassandraRules is IKassandraRules, Initializable, OwnableUpgradeable {
+contract KassandraRules is IKassandraRulesImp, Initializable, OwnableUpgradeable {
     address internal _addressKCUPE;
     uint256 internal _maxWeightChangePerSecond;
     uint256 internal _minWeightChangeDuration;
+    uint256 internal _kassandraAumFee;
 
     /**
      * @dev Emitted when the implementation returned by the beacon is changed.
@@ -32,18 +33,21 @@ contract KassandraRules is IKassandraRules, Initializable, OwnableUpgradeable {
     event Upgraded(address indexed implementation);
     event WeightChangeDurationUpdated(uint256 oldMinimumDuration, uint256 newMinimumDuration);
     event WeightChangePerSecondUpdated(uint256 oldMaxChangePerSecond, uint256 newMaxChangePerSecond);
+    event KassandraAumFeePercentageUpdated(uint256 newKassandraAumFee);
 
     // function _authorizeUpgrade(address) internal override onlyOwner {}
 
     function initialize(
         address addressKCUPE,
         uint256 maximumWeightChangePerSecond,
-        uint256 minimumWeightChangeDuration
+        uint256 minimumWeightChangeDuration,
+        uint256 kassandraAumFee
      ) external initializer {
         __Ownable_init();
         _addressKCUPE = addressKCUPE;
         _maxWeightChangePerSecond = maximumWeightChangePerSecond;
         _minWeightChangeDuration = minimumWeightChangeDuration;
+        _kassandraAumFee = kassandraAumFee;
     }
 
     function controllerExtender() external view override returns(address) {
@@ -56,6 +60,15 @@ contract KassandraRules is IKassandraRules, Initializable, OwnableUpgradeable {
 
     function minWeightChangeDuration() external view override returns(uint256) {
         return _minWeightChangeDuration;
+    }
+
+    function kassandraAumFeePercentage() external view override returns(uint256) {
+        return _kassandraAumFee;
+    }
+
+    function setKassandraAumFeePercentage(uint256 kassandraAumFee) external onlyOwner {
+        _kassandraAumFee = kassandraAumFee;
+        emit KassandraAumFeePercentageUpdated(_kassandraAumFee);
     }
 
     function setControllerExtender(address addressKCUPE) external onlyOwner {
