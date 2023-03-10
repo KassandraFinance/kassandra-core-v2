@@ -47,10 +47,6 @@ describe("KassandraControllerUpgradablePoolExtension", () => {
                 canChangeSwapFee: true,
                 canUpdateMetadata: true,
             },
-            {
-                feesToManager: ethers.utils.parseEther("0.015"),
-                feesToReferral: ethers.utils.parseEther("0.01"),
-            },
             kassandraRules.address,
             manager.address,
             privateInvestors.address,
@@ -77,7 +73,11 @@ describe("KassandraControllerUpgradablePoolExtension", () => {
         await proxyInvest.deployed();
         
         await controller.deployed();
-        await controller["initialize(address,address)"](managedPool.address, proxyInvest.address);
+        await controller["initialize(address,address,(uint64,uint64))"](managedPool.address, proxyInvest.address,             
+        {
+            feesToManager: ethers.utils.parseEther("0.015"),
+            feesToReferral: ethers.utils.parseEther("0.01"),
+        });
         
         const extendedController = KCUPE.attach(controller.address);
         await managedPool.mint(extendedController.address, ethers.utils.parseEther('10'));
