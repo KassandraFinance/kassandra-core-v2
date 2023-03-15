@@ -44,10 +44,10 @@ contract KassandraRules is IKassandraRulesImp, Initializable, OwnableUpgradeable
         uint256 kassandraAumFee
      ) external initializer {
         __Ownable_init();
-        _addressKCUPE = addressKCUPE;
-        _maxWeightChangePerSecond = maximumWeightChangePerSecond;
-        _minWeightChangeDuration = minimumWeightChangeDuration;
-        _kassandraAumFee = kassandraAumFee;
+        setKassandraAumFeePercentage(kassandraAumFee);
+        setControllerExtender(addressKCUPE);
+        setMaxWeightChangePerSecond(maximumWeightChangePerSecond);
+        setMinWeightChangeDuration(minimumWeightChangeDuration);
     }
 
     function controllerExtender() external view override returns(address) {
@@ -66,24 +66,24 @@ contract KassandraRules is IKassandraRulesImp, Initializable, OwnableUpgradeable
         return _kassandraAumFee;
     }
 
-    function setKassandraAumFeePercentage(uint256 kassandraAumFee) external onlyOwner {
+    function setKassandraAumFeePercentage(uint256 kassandraAumFee) public onlyOwner {
         _kassandraAumFee = kassandraAumFee;
         emit KassandraAumFeePercentageUpdated(_kassandraAumFee);
     }
 
-    function setControllerExtender(address addressKCUPE) external onlyOwner {
+    function setControllerExtender(address addressKCUPE) public onlyOwner {
         require(addressKCUPE != address(0), KacyErrors.ZERO_ADDRESS);
         _addressKCUPE = addressKCUPE;
         emit Upgraded(addressKCUPE);
     }
 
-    function setMaxWeightChangePerSecond(uint256 maximumWeightChangePerSecond) external onlyOwner {
+    function setMaxWeightChangePerSecond(uint256 maximumWeightChangePerSecond) public onlyOwner {
         require(maximumWeightChangePerSecond > 0, KacyErrors.ZERO_VALUE);
         emit WeightChangePerSecondUpdated(_maxWeightChangePerSecond, maximumWeightChangePerSecond);
         _maxWeightChangePerSecond = maximumWeightChangePerSecond;
     }
 
-    function setMinWeightChangeDuration(uint256 minimumWeightChangeDuration) external onlyOwner {
+    function setMinWeightChangeDuration(uint256 minimumWeightChangeDuration) public onlyOwner {
         require(minimumWeightChangeDuration > 0, KacyErrors.ZERO_VALUE);
         emit WeightChangeDurationUpdated(_minWeightChangeDuration, minimumWeightChangeDuration);
         _minWeightChangeDuration = minimumWeightChangeDuration;

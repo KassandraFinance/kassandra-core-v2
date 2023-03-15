@@ -42,7 +42,7 @@ describe("KassandraManagedPoolController", () => {
 
         const minWeightChangeDuration = time.duration.days(1);
         const KassandraRules = await ethers.getContractFactory("KassandraRules");
-        const kassandraRules = await upgrades.deployProxy(KassandraRules, [ethers.constants.AddressZero, 1000, minWeightChangeDuration, kassandraAumFee]);
+        const kassandraRules = await upgrades.deployProxy(KassandraRules, [managedPool.address, 1000, minWeightChangeDuration, kassandraAumFee]);
 
         const Whitelist = await ethers.getContractFactory("KassandraWhitelist");
         const whitelist = await upgrades.deployProxy(Whitelist);

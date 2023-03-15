@@ -28,7 +28,7 @@ describe("KassandraControlledManagedPoolFactory", () => {
         const kassandraAumFee = 0.005e18.toString()
         
         const KassandraRulesDeployer = await ethers.getContractFactory("KassandraRules");
-        const kassandraRules = await upgrades.deployProxy(KassandraRulesDeployer, [owner.address, 0, 0, kassandraAumFee]) as KassandraRules;
+        const kassandraRules = await upgrades.deployProxy(KassandraRulesDeployer, [owner.address, 1, 1, kassandraAumFee]) as KassandraRules;
 
         const WhitelistDeployer = await ethers.getContractFactory("KassandraWhitelist");
         const whitelist = await upgrades.deployProxy(WhitelistDeployer) as KassandraWhitelist;

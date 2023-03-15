@@ -89,7 +89,7 @@ describe('ProxyInvest', () => {
     const KCUPE = await ethers.getContractFactory("KassandraControllerUpgradablePoolExtension");
     const kcupe = await KCUPE.deploy();
     const KassandraRules = await ethers.getContractFactory("KassandraRules");
-    const kassandraRules = await upgrades.deployProxy(KassandraRules, [kcupe.address, 0, 0, 0]);
+    const kassandraRules = await upgrades.deployProxy(KassandraRules, [kcupe.address, 1, 1, 0]);
     const AuthorizedManagers = await ethers.getContractFactory("AuthorizedManagers");
     const authorizedManagers = await upgrades.deployProxy(AuthorizedManagers) as AuthorizedManagers;
     await authorizedManagers.deployed();
