@@ -20,5 +20,7 @@ interface IWhitelist {
 
     function isBlacklist() external pure returns (bool);
 
+    function countTokens() external view returns (uint256);
+
     function getTokens(uint256 skip, uint256 take) external view returns (address[] memory);
 }

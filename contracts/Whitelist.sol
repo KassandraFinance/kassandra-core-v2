@@ -39,6 +39,10 @@ contract KassandraWhitelist is IWhitelist, OwnableUpgradeable {
         return _tokenList[token];
     }
 
+    function countTokens(address pool) external view override returns (uint256) {
+        return _tokens.length;
+    }
+
     function getTokens(uint256 skip, uint256 take) external view override returns (address[] memory) {
         uint256 size = _tokens.length;
         uint256 _skip = skip > size ? size : skip;
