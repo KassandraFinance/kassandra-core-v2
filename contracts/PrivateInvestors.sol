@@ -25,8 +25,13 @@ import "./interfaces/IPrivateInvestors.sol";
 import "./BasePoolController.sol";
 
 contract PrivateInvestors is IPrivateInvestors, OwnableUpgradeable {
-    // pool address -> investor -> bool
-    mapping(address => mapping(address => bool)) private _allowedInvestors;
+    // pool address -> investor -> index
+    mapping(address => mapping(address => uint32)) private _investorIndexInPoolByAddress;
+    // pool address -> index -> investor
+    mapping(address => mapping(uint32 => address)) private _investorAddressInPoolByIndex;
+    // pool address -> length
+    mapping(address => uint32) private _numAllowedInvestors;
+
     mapping(address => bool) internal _controllers;
     mapping(address => bool) private _factories;
 
@@ -51,21 +56,25 @@ contract PrivateInvestors is IPrivateInvestors, OwnableUpgradeable {
     }
 
     function isInvestorAllowed(address pool, address investor) external view override returns (bool) {
-        return _allowedInvestors[pool][investor];
+        return _allowedInvestors[pool][investor] > 0;
     }
 
     function addPrivateInvestors(address[] calldata investors) external override {
         _require(_controllers[msg.sender], Errors.SENDER_NOT_ALLOWED);
-        
+
         address pool = BasePoolController(msg.sender).pool();
         address owner = ManagedPool(pool).getOwner();
 
         _require(owner == msg.sender, Errors.CALLER_IS_NOT_OWNER);
 
         uint256 size = investors.length;
+        uint32 numInvestors = _numAllowedInvestors[pool];
         for (uint256 i = 0; i < size; i++) {
-            _allowedInvestors[pool][investors[i]] = true;
+            numInvestors++;
+            _investorIndexInPoolByAddress[pool][investors[i]] = numInvestors;
+            _investorAddressInPoolByIndex[pool][numInvestors] = investors[i];
         }
+        _numAllowedInvestors[pool] = numInvestors;
 
         emit PrivateInvestorsAdded(ManagedPool(pool).getPoolId(), pool, investors);
     }
@@ -79,10 +88,39 @@ contract PrivateInvestors is IPrivateInvestors, OwnableUpgradeable {
         _require(owner == msg.sender, Errors.CALLER_IS_NOT_OWNER);
 
         uint256 size = investors.length;
+        uint32 numInvestors = _numAllowedInvestors[pool];
         for (uint256 i = 0; i < size; i++) {
-            _allowedInvestors[pool][investors[i]] = false;
+            uint32 index = _investorIndexInPoolByAddress[pool][investors[i]];
+
+            address lastInvestor = _investorAddressInPoolByIndex[pool][numInvestors];
+            _investorIndexInPoolByAddress[pool][lastInvestor] = index;
+            delete _investorIndexInPoolByAddress[pool][investors[i]];
+
+            delete _investorAddressInPoolByIndex[pool][index];
+            _investorAddressInPoolByIndex[pool][index] = _investorAddressInPoolByIndex[pool][numInvestors];
+
+            numInvestors--;
         }
+        _numAllowedInvestors[pool] = numInvestors;
 
         emit PrivateInvestorsRemoved(ManagedPool(pool).getPoolId(), pool, investors);
+    }
+
+    function countAllowedInvestors(address pool) external view returns (uint32) {
+        return _numAllowedInvestors[pool];
+    }
+
+    function getInvestors(address pool, uint256 skip, uint256 take) external view returns (address[] memory) {
+        uint256 size = _numAllowedInvestors[pool];
+        uint256 _skip = skip > size ? size : skip;
+        uint256 _take = take + _skip;
+        _take = _take > size ? size : _take;
+
+        address[] memory investors = new address[](_take - _skip);
+        for (uint i = skip; i < _take; i++) {
+            investors[i - skip] = _investorAddressInPoolByIndex[i + 1];
+        }
+
+        return investors;
     }
 }
