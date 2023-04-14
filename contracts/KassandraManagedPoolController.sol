@@ -65,6 +65,7 @@ contract KassandraManagedPoolController is BasePoolController, Proxy {
 
     event JoinFeesUpdate(uint256 feesToManager, uint256 feesToReferral);
     event StrategistChanged(address previousStrategist, address newStrategist);
+    event PoolMadePublic();
 
     /**
      * @dev Pass in the `BasePoolRights` and `ManagedPoolRights` structures, to form the complete set of
@@ -221,6 +222,7 @@ contract KassandraManagedPoolController is BasePoolController, Proxy {
     function setPublicPool() external virtual onlyManager withBoundPool {
         _require(_isPrivatePool, Errors.INVALID_OPERATION);
         _isPrivatePool = false;
+        emit PoolMadePublic();
     }
 
     function addAllowedAddresses(address[] calldata members) external virtual onlyManager withBoundPool {
