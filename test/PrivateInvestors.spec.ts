@@ -5,7 +5,7 @@ import { PrivateInvestors } from '../typechain-types';
 
 describe('PrivateInvestors', () => {
   async function deployPrivateInvestors() {
-    const [ownerPrivateInvestor, investor, factory, investor2] = await ethers.getSigners();
+    const [ownerPrivateInvestor, investor, factory, investor2, ...manyInvestors] = await ethers.getSigners();
     const OWNER_ADDRESS = '0xba1ba1ba1ba1ba1ba1ba1ba1ba1ba1ba1ba1ba1b';
 
     await network.provider.request({
@@ -29,7 +29,7 @@ describe('PrivateInvestors', () => {
 
     await privateInvestors.setFactory(factory.address);
 
-    return { privateInvestors, investor, investor2, ownerPool, factory, controller, invalidController, managedPool };
+    return { privateInvestors, investor, investor2, ownerPool, factory, controller, invalidController, managedPool, manyInvestors };
   }
 
   it("should not allow running the initializer again", async () => {
@@ -84,6 +84,18 @@ describe('PrivateInvestors', () => {
     expect(await privateInvestors.isInvestorAllowed(managedPool.address, investor2.address)).to.true;
   })
 
+  it("should list all private investors", async () => {
+    const { privateInvestors, controller, factory, managedPool, manyInvestors } = await loadFixture(deployPrivateInvestors);
+    await privateInvestors.connect(factory).setController(controller.address);
+    await controller.addAllowedInvestors(manyInvestors.map(investor => investor.address), privateInvestors.address);
+    const privateList = await privateInvestors.getInvestors(managedPool.address, 0, 100)
+
+    for (const investor of manyInvestors) {
+      expect(privateList).contain(investor.address)
+    }
+    expect(privateList.length).equal(manyInvestors.length)
+  })
+
   it('should revert removePrivateInvestors if controller is not authorized', async () => {
     const { privateInvestors, investor } = await loadFixture(deployPrivateInvestors);
 
@@ -119,6 +131,28 @@ describe('PrivateInvestors', () => {
 
     expect(await privateInvestors.isInvestorAllowed(managedPool.address, investor.address)).to.false;
     expect(await privateInvestors.isInvestorAllowed(managedPool.address, investor.address)).to.false;
+  })
+
+  it("should list correct private investors after remove", async () => {
+    const { privateInvestors, controller, investor, investor2, factory, managedPool, manyInvestors } = await loadFixture(deployPrivateInvestors);
+    await privateInvestors.connect(factory).setController(controller.address);
+    await controller.addAllowedInvestors([investor.address, ...manyInvestors.map(investor => investor.address), investor2.address], privateInvestors.address);
+    
+    expect(await privateInvestors.isInvestorAllowed(managedPool.address, investor.address)).to.true;
+    expect(await privateInvestors.isInvestorAllowed(managedPool.address, investor2.address)).to.true; 
+
+    await controller.removeAllowedInvestors([investor.address], privateInvestors.address);
+    await controller.removeAllowedInvestors([investor2.address], privateInvestors.address);
+
+    let privateList = await privateInvestors.getInvestors(managedPool.address, 0, 100)
+
+
+    expect(privateList).not.contains(investor.address)
+    expect(privateList).not.contains(investor2.address)
+    for (const investor of manyInvestors) {
+      expect(privateList).contain(investor.address)
+    }
+    expect(privateList.length).equal(manyInvestors.length)
   })
 
   it("should remove a factory", async () => {

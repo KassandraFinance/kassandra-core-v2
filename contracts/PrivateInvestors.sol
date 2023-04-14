@@ -56,7 +56,7 @@ contract PrivateInvestors is IPrivateInvestors, OwnableUpgradeable {
     }
 
     function isInvestorAllowed(address pool, address investor) external view override returns (bool) {
-        return _allowedInvestors[pool][investor] > 0;
+        return _investorIndexInPoolByAddress[pool][investor] > 0;
     }
 
     function addPrivateInvestors(address[] calldata investors) external override {
@@ -117,8 +117,8 @@ contract PrivateInvestors is IPrivateInvestors, OwnableUpgradeable {
         _take = _take > size ? size : _take;
 
         address[] memory investors = new address[](_take - _skip);
-        for (uint i = skip; i < _take; i++) {
-            investors[i - skip] = _investorAddressInPoolByIndex[i + 1];
+        for (uint256 i = skip; i < _take; i++) {
+            investors[i - skip] = _investorAddressInPoolByIndex[pool][uint32(i + 1)];
         }
 
         return investors;
