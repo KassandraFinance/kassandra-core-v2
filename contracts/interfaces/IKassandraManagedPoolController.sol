@@ -29,5 +29,7 @@ interface IKassandraManagedPoolController {
 
     function isPrivatePool() external view returns (bool);
 
+    function isAllowedAddress(address member) external view returns (bool);
+
     function pool() external returns (address);
 }

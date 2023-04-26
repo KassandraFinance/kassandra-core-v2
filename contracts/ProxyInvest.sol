@@ -25,7 +25,6 @@ import "@balancer-labs/v2-solidity-utils/contracts/math/FixedPoint.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
 import "./interfaces/IKassandraManagedPoolController.sol";
-import "./interfaces/IPrivateInvestors.sol";
 
 contract ProxyInvest is OwnableUpgradeable {
     using SafeERC20 for IERC20;
@@ -49,7 +48,6 @@ contract ProxyInvest is OwnableUpgradeable {
         ALL_TOKENS_IN_FOR_EXACT_BPT_OUT
     }
 
-    IPrivateInvestors private _privateInvestors;
     address private _swapProvider;
     IVault private _vault;
 
@@ -63,11 +61,10 @@ contract ProxyInvest is OwnableUpgradeable {
         uint256 minTokenAmountOut;
     }
 
-    function initialize(IVault vault, address swapProvider, IPrivateInvestors privateInvestors) public initializer {
+    function initialize(IVault vault, address swapProvider) public initializer {
         __Ownable_init();
         _vault = vault;
         _swapProvider = swapProvider;
-        _privateInvestors = privateInvestors;
     }
 
     function getVault() external view returns (IVault) {
@@ -99,10 +96,8 @@ contract ProxyInvest is OwnableUpgradeable {
             uint256[] memory amountsIn
         )
     {
-        address _pool = IKassandraManagedPoolController(params.controller).pool();
         _require(
-            !IKassandraManagedPoolController(params.controller).isPrivatePool() ||
-                _privateInvestors.isInvestorAllowed(_pool, msg.sender),
+            IKassandraManagedPoolController(params.controller).isAllowedAddress(msg.sender),
             Errors.SENDER_NOT_ALLOWED
         );
 
@@ -173,11 +168,7 @@ contract ProxyInvest is OwnableUpgradeable {
         )
     {
         address _pool = IKassandraManagedPoolController(controller).pool();
-        _require(
-            !IKassandraManagedPoolController(controller).isPrivatePool() ||
-                _privateInvestors.isInvestorAllowed(_pool, msg.sender),
-            Errors.SENDER_NOT_ALLOWED
-        );
+        _require(IKassandraManagedPoolController(controller).isAllowedAddress(msg.sender), Errors.SENDER_NOT_ALLOWED);
 
         for (uint i = 1; i < request.assets.length; i++) {
             IERC20 tokenIn = IERC20(address(request.assets[i]));
@@ -282,7 +273,7 @@ contract ProxyInvest is OwnableUpgradeable {
     {
         uint256 indexToken;
         (, amountToRecipient, indexToken) = abi.decode(request.userData, (uint256, uint256, uint256));
-        
+
         uint256 bptAmount;
         {
             (uint64 feesToManager, uint64 feesToReferral) = IKassandraManagedPoolController(controller).getJoinFees();
@@ -330,7 +321,7 @@ contract ProxyInvest is OwnableUpgradeable {
         )
     {
         (, amountToRecipient) = abi.decode(request.userData, (uint256, uint256));
-        
+
         uint256 bptAmount;
         {
             (uint64 feesToManager, uint64 feesToReferral) = IKassandraManagedPoolController(controller).getJoinFees();
