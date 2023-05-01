@@ -69,7 +69,7 @@ describe("KassandraControllerUpgradablePoolExtension", () => {
         await managedPool.setNormalizedWeights(initialWeights)
         
         const ProxyInvest = await ethers.getContractFactory('ProxyInvest');
-        const proxyInvest = await upgrades.deployProxy(ProxyInvest, [vault.address, ethers.constants.AddressZero, privateInvestors.address]);
+        const proxyInvest = await upgrades.deployProxy(ProxyInvest, [vault.address, ethers.constants.AddressZero]);
         await proxyInvest.deployed();
         
         await controller.deployed();

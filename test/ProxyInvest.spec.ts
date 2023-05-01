@@ -55,7 +55,7 @@ describe('ProxyInvest', () => {
     const privateInvestors = await upgrades.deployProxy(PrivateInvestors);
     await privateInvestors.deployed();
     const ProxyInvest = await ethers.getContractFactory('ProxyInvest');
-    proxyInvest = await upgrades.deployProxy(ProxyInvest, [VAULT_ADDRESS, SWAP_PROVIDER_ADDRESS_V5, privateInvestors.address]) as ProxyInvest;
+    proxyInvest = await upgrades.deployProxy(ProxyInvest, [VAULT_ADDRESS, SWAP_PROVIDER_ADDRESS_V5]) as ProxyInvest;
     await proxyInvest.deployed();
 
     await network.provider.request({
@@ -98,10 +98,11 @@ describe('ProxyInvest', () => {
     const ManagedFactory = await ethers.getContractFactory("ManagedPoolFactory", {
       libraries: {
         CircuitBreakerLib: CircuitBreakerLib.address,
-        ManagedPoolAddRemoveTokenLib: ManagedPoolAddRemoveTokenLib.address
+        ManagedPoolAddRemoveTokenLib: ManagedPoolAddRemoveTokenLib.address,
+        ManagedPoolAmmLib: "0xCEFD59EedAFA9EE8Ccda1AaF944088E68B5BD890"
       }
     });
-    const managedFactory = await ManagedFactory.deploy(VAULT_ADDRESS, PROTOCOL_FEE_PROVIDER_ADDRESS, "2", "2", 10, 10);
+    const managedFactory = await ManagedFactory.deploy(VAULT_ADDRESS, PROTOCOL_FEE_PROVIDER_ADDRESS, "0x72EbAFDdC4C7d3EB702c81295D90A8B29F008a03","0x1eb79551CA0e83EC145608BC39a0c7F10cA21Aa5", "2", "2", 10, 10);
     await managedFactory.deployed();
 
     const ControllerManagedFactory = await ethers.getContractFactory("KassandraControlledManagedPoolFactory");
@@ -129,6 +130,7 @@ describe('ProxyInvest', () => {
       maxAmountsIn,
       settingsParams,
       feesSettings,
+      ethers.constants.HashZero
     )
 
     await controllerManagedFactory.connect(manager).create(
@@ -139,11 +141,16 @@ describe('ProxyInvest', () => {
       maxAmountsIn,
       settingsParams,
       feesSettings,
+      ethers.constants.HashZero
     )
 
     pool = await ethers.getContractAt("ManagedPool", response.pool) as ManagedPool;
     poolController = await ethers.getContractAt("KassandraManagedPoolController", response.poolController) as KassandraManagedPoolController;
-    pool.connect(account).approve(proxyInvest.address, ethers.constants.MaxInt256);
+    await pool.connect(account).approve(proxyInvest.address, ethers.constants.MaxInt256);
+      
+    console.log(await ethers.provider.getCode(response.poolController))
+    console.log(await ethers.provider.getCode(response.pool))
+      console.log(pool)
   })
 
   describe('Deployment', () => {
