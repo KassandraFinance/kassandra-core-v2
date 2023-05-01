@@ -111,6 +111,25 @@ describe('PrivateInvestors', () => {
     await expect(invalidController.removeAllowedInvestors([investor.address], privateInvestors.address)).to.revertedWith('BAL#426');
   });
 
+  it('should revert when add investor if he is allow listed', async () => {
+    const { controller, managedPool, privateInvestors, investor, factory } = await loadFixture(deployPrivateInvestors)
+    await privateInvestors.connect(factory).setController(controller.address);
+
+    await controller.addAllowedInvestors([investor.address], privateInvestors.address);
+    expect(await privateInvestors.isInvestorAllowed(managedPool.address, investor.address)).true;
+  
+    await expect(controller.addAllowedInvestors([investor.address], privateInvestors.address)).to.revertedWith('BAL#432')
+  })
+
+  it('should revert when remove investor if he is not allow listed', async () => {
+    const { controller, managedPool, privateInvestors, investor, factory } = await loadFixture(deployPrivateInvestors)
+    await privateInvestors.connect(factory).setController(controller.address);
+
+    expect(await privateInvestors.isInvestorAllowed(managedPool.address, investor.address)).false;
+  
+    await expect(controller.removeAllowedInvestors([investor.address], privateInvestors.address)).to.revertedWith('BAL#433')
+  })
+
   it("should remove an allowed investor if controller is authorized", async () => {
     const { privateInvestors, controller, investor, investor2, factory, managedPool } = await loadFixture(deployPrivateInvestors);
     await privateInvestors.connect(factory).setController(controller.address);

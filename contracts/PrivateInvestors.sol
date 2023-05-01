@@ -70,6 +70,7 @@ contract PrivateInvestors is IPrivateInvestors, OwnableUpgradeable {
         uint256 size = investors.length;
         uint32 numInvestors = _numAllowedInvestors[pool];
         for (uint256 i = 0; i < size; i++) {
+            _require(_investorIndexInPoolByAddress[pool][investors[i]] == 0, Errors.ADDRESS_ALREADY_ALLOWLISTED);
             numInvestors++;
             _investorIndexInPoolByAddress[pool][investors[i]] = numInvestors;
             _investorAddressInPoolByIndex[pool][numInvestors] = investors[i];
@@ -91,6 +92,7 @@ contract PrivateInvestors is IPrivateInvestors, OwnableUpgradeable {
         uint32 numInvestors = _numAllowedInvestors[pool];
         for (uint256 i = 0; i < size; i++) {
             uint32 index = _investorIndexInPoolByAddress[pool][investors[i]];
+            _require(index > 0, Errors.ADDRESS_NOT_ALLOWLISTED);
 
             address lastInvestor = _investorAddressInPoolByIndex[pool][numInvestors];
             _investorIndexInPoolByAddress[pool][lastInvestor] = index;
