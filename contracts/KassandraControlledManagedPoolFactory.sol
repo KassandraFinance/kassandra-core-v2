@@ -49,16 +49,16 @@ contract KassandraControlledManagedPoolFactory is Ownable {
         address indexed caller,
         bytes32 indexed vaultPoolId,
         address indexed pool,
-        address         poolController,
-        address         whitelist,
-        bool            isPrivatePool
+        address poolController,
+        address whitelist,
+        bool isPrivatePool
     );
 
     event KassandraPoolCreatedTokens(
         bytes32 indexed vaultPoolId,
-        string          tokenName,
-        string          tokenSymbol,
-        IERC20[]        tokens
+        string tokenName,
+        string tokenSymbol,
+        IERC20[] tokens
     );
 
     constructor(
@@ -89,28 +89,32 @@ contract KassandraControlledManagedPoolFactory is Ownable {
         IWhitelist whitelist,
         uint256[] memory amountsIn,
         ManagedPoolSettings.ManagedPoolSettingsParams memory settingsParams,
-        KassandraManagedPoolController.FeesPercentages memory feesSettings
+        KassandraManagedPoolController.FeesPercentages memory feesSettings,
+        bytes32 salt
     ) external returns (address pool, KassandraManagedPoolController poolController) {
         _require(authorizedManagers.canCreatePool(msg.sender), Errors.SENDER_NOT_ALLOWED);
         _require(amountsIn.length == settingsParams.tokens.length, Errors.INPUT_LENGTH_MISMATCH);
 
-        uint256 kassandraAumFee = IKassandraRules(kassandraRules).kassandraAumFeePercentage();
+        {
+            uint256 kassandraAumFee = IKassandraRules(kassandraRules).kassandraAumFeePercentage();
+            settingsParams.managementAumFeePercentage = settingsParams.managementAumFeePercentage.add(kassandraAumFee);
 
-        poolController = new KassandraManagedPoolController(
-            BasePoolController.BasePoolRights({
-                canTransferOwnership: true,
-                canChangeSwapFee: true,
-                canUpdateMetadata: true
-            }),
-            kassandraRules,
-            msg.sender,
-            _privateInvestors,
-            isPrivatePool,
-            _vault,
-            assetManager,
-            whitelist,
-            kassandraAumFee
-        );
+            poolController = new KassandraManagedPoolController(
+                BasePoolController.BasePoolRights({
+                    canTransferOwnership: true,
+                    canChangeSwapFee: true,
+                    canUpdateMetadata: true
+                }),
+                kassandraRules,
+                msg.sender,
+                _privateInvestors,
+                isPrivatePool,
+                _vault,
+                assetManager,
+                whitelist,
+                kassandraAumFee
+            );
+        }
 
         settingsParams.mustAllowlistLPs = false;
 
@@ -144,9 +148,8 @@ contract KassandraControlledManagedPoolFactory is Ownable {
                 }
             }
 
-            settingsParams.managementAumFeePercentage = settingsParams.managementAumFeePercentage.add(kassandraAumFee);
             // Let the base factory deploy the pool (owner is the controller)
-            pool = ManagedPoolFactory(managedPoolFactory).create(params, settingsParams, address(poolController));
+            pool = ManagedPoolFactory(managedPoolFactory).create(params, settingsParams, address(poolController), salt);
             assetsWithBPT[0] = IERC20(pool);
             amountsInWithBPT[0] = type(uint256).max;
 
@@ -159,20 +162,8 @@ contract KassandraControlledManagedPoolFactory is Ownable {
         }
 
         bytes32 poolId = IManagedPool(pool).getPoolId();
-        emit KassandraPoolCreated(
-            msg.sender,
-            poolId,
-            pool,
-            address(poolController),
-            address(whitelist),
-            isPrivatePool
-        );
-        emit KassandraPoolCreatedTokens(
-            poolId,
-            name,
-            symbol,
-            settingsParams.tokens
-        );
+        emit KassandraPoolCreated(msg.sender, poolId, pool, address(poolController), address(whitelist), isPrivatePool);
+        emit KassandraPoolCreatedTokens(poolId, name, symbol, settingsParams.tokens);
 
         _vault.joinPool(poolId, address(this), msg.sender, request);
 

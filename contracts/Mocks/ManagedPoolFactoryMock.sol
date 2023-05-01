@@ -31,7 +31,8 @@ contract ManagedPoolFactoryMock {
     function create(
         ManagedPool.ManagedPoolParams memory params,
         ManagedPoolSettings.ManagedPoolSettingsParams memory settingsParams,
-        address owner
+        address owner,
+        bytes32
     ) external returns (address pool) {
         for (uint256 i = 0; i < params.assetManagers.length; i++) {
             require(params.assetManagers[i] == _assetManager, "Wrong asset manager");

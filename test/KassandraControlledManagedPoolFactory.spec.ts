@@ -34,7 +34,7 @@ describe("KassandraControlledManagedPoolFactory", () => {
         const whitelist = await upgrades.deployProxy(WhitelistDeployer) as KassandraWhitelist;
 
         const ProxyInvest = await ethers.getContractFactory('ProxyInvest');
-        const proxyInvest = await upgrades.deployProxy(ProxyInvest, [vault.address, ethers.constants.AddressZero, privateInvestors.address]);
+        const proxyInvest = await upgrades.deployProxy(ProxyInvest, [vault.address, ethers.constants.AddressZero]);
 
         const ControllerFactory = await ethers.getContractFactory("KassandraControlledManagedPoolFactory");
         const controllerFactory = await ControllerFactory.deploy(
@@ -92,9 +92,8 @@ describe("KassandraControlledManagedPoolFactory", () => {
                 feesToManager: ethers.utils.parseEther("0.015"),
                 feesToReferral: ethers.utils.parseEther("0.015"),
             },
+            salt: ethers.constants.HashZero
         };
-
-
 
         return {
             controllerFactory,
@@ -116,6 +115,7 @@ describe("KassandraControlledManagedPoolFactory", () => {
     }
 
     it("should have set correct addresses from constructor", async () => {
+        console.log("aaa")
         const { controllerFactory, managedPoolFactory, kassandraRules, assetManager, authorizedManagers, kassandraAumFee } = await loadFixture(deployFactory);
         expect(await controllerFactory.managedPoolFactory()).equal(managedPoolFactory.address);
         expect(await controllerFactory.kassandraRules()).equal(kassandraRules.address);
@@ -134,6 +134,7 @@ describe("KassandraControlledManagedPoolFactory", () => {
             pool.maxAmountsIn,
             pool.settingsParams,
             pool.feesSettings,
+            pool.salt
         )).to.be.revertedWith("BAL#401");
     })
 
@@ -147,6 +148,7 @@ describe("KassandraControlledManagedPoolFactory", () => {
             [...pool.maxAmountsIn, 1],
             pool.settingsParams,
             pool.feesSettings,
+            pool.salt
         )).to.be.revertedWith("BAL#103");
         await expect(controllerFactory.connect(manager).create(
             pool.name,
@@ -156,6 +158,7 @@ describe("KassandraControlledManagedPoolFactory", () => {
             [pool.maxAmountsIn[0]],
             pool.settingsParams,
             pool.feesSettings,
+            pool.salt
         )).to.be.revertedWith("BAL#103");
     })
 
@@ -172,6 +175,7 @@ describe("KassandraControlledManagedPoolFactory", () => {
                 tokens: [degen.address, matic.address],
             },
             pool.feesSettings,
+            pool.salt
         )).to.be.revertedWith("BAL#309");
     })
 
@@ -197,6 +201,7 @@ describe("KassandraControlledManagedPoolFactory", () => {
             pool.maxAmountsIn,
             pool.settingsParams,
             pool.feesSettings,
+            pool.salt
         );
 
         const eventName = "KassandraPoolCreated";
@@ -245,6 +250,7 @@ describe("KassandraControlledManagedPoolFactory", () => {
             pool.maxAmountsIn,
             pool.settingsParams,
             pool.feesSettings,
+            pool.salt
         );
 
         const eventName = "KassandraPoolCreated";
