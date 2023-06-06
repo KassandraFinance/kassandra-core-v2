@@ -31,6 +31,23 @@ contract ProxyInvest is OwnableUpgradeable {
     using FixedPoint for uint256;
     using FixedPoint for uint64;
 
+    struct ProxyParams {
+        address recipient;
+        address referrer;
+        address controller;
+        IERC20 tokenIn;
+        uint256 tokenAmountIn;
+        IERC20 tokenExchange;
+        uint256 minTokenAmountOut;
+    }
+
+    enum JoinKind {
+        INIT,
+        EXACT_TOKENS_IN_FOR_BPT_OUT,
+        TOKEN_IN_FOR_EXACT_BPT_OUT,
+        ALL_TOKENS_IN_FOR_EXACT_BPT_OUT
+    }
+
     event JoinedPool(
         bytes32 indexed poolId,
         address indexed recipient,
@@ -41,25 +58,10 @@ contract ProxyInvest is OwnableUpgradeable {
         uint256 amountToReferrer
     );
 
-    enum JoinKind {
-        INIT,
-        EXACT_TOKENS_IN_FOR_BPT_OUT,
-        TOKEN_IN_FOR_EXACT_BPT_OUT,
-        ALL_TOKENS_IN_FOR_EXACT_BPT_OUT
-    }
-
     address private _swapProvider;
     IVault private _vault;
-
-    struct ProxyParams {
-        address recipient;
-        address referrer;
-        address controller;
-        IERC20 tokenIn;
-        uint256 tokenAmountIn;
-        IERC20 tokenExchange;
-        uint256 minTokenAmountOut;
-    }
+    IWETH private _WETH;
+    address private _proxyTransfer;
 
     function initialize(IVault vault, address swapProvider) public initializer {
         __Ownable_init();
@@ -75,6 +77,18 @@ contract ProxyInvest is OwnableUpgradeable {
         return _swapProvider;
     }
 
+    function getWETH() external view returns (IWETH) {
+        return _WETH;
+    }
+
+    function getProxyTransfer() external view returns (address) {
+        return _proxyTransfer;
+    }
+
+    function setProxyTransfer(address proxyTransfer) external onlyOwner {
+        _proxyTransfer = proxyTransfer;
+    }
+
     function setSwapProvider(address swapProvider) external onlyOwner {
         _swapProvider = swapProvider;
     }
@@ -83,9 +97,13 @@ contract ProxyInvest is OwnableUpgradeable {
         _vault = vault;
     }
 
+    function setWETH(IWETH weth) external onlyOwner {
+        _WETH = weth;
+    }
+
     function joinPoolExactTokenInWithSwap(
         ProxyParams calldata params,
-        bytes calldata data
+        bytes[] calldata data
     )
         external
         payable
@@ -103,14 +121,32 @@ contract ProxyInvest is OwnableUpgradeable {
 
         if (msg.value == 0) {
             params.tokenIn.safeTransferFrom(msg.sender, address(this), params.tokenAmountIn);
-            if (params.tokenIn.allowance(address(this), _swapProvider) < params.tokenAmountIn) {
-                params.tokenIn.safeApprove(_swapProvider, type(uint256).max);
+            if (params.tokenIn.allowance(address(this), _proxyTransfer) < params.tokenAmountIn) {
+                params.tokenIn.safeApprove(_proxyTransfer, type(uint256).max);
             }
+        } else {
+            _require(
+                msg.value == params.tokenAmountIn && address(params.tokenIn) == address(_WETH),
+                Errors.INSUFFICIENT_ETH
+            );
+            _WETH.deposit{ value: msg.value }();
         }
 
         {
-            (bool success, bytes memory response) = address(_swapProvider).call{ value: msg.value }(data);
-            require(success, string(response));
+            bool success;
+            bytes memory response;
+            uint256 size = data.length;
+            for (uint i = 0; i < size; i++) {
+                (success, response) = address(_swapProvider).call(data[i]);
+                if (!success) {
+                    assembly {
+                        let ptr := mload(0x40)
+                        let _size := returndatasize()
+                        returndatacopy(ptr, 0, size)
+                        revert(ptr, _size)
+                    }
+                }
+            }
         }
 
         uint256[] memory maxAmountsInWithBPT;
@@ -120,16 +156,17 @@ contract ProxyInvest is OwnableUpgradeable {
             (tokens, , ) = _vault.getPoolTokens(
                 IManagedPool(IKassandraManagedPoolController(params.controller).pool()).getPoolId()
             );
+
             uint256 size = tokens.length;
             maxAmountsInWithBPT = new uint256[](size);
             maxAmountsIn = new uint256[](size - 1);
-
             for (uint i = 1; i < size; i++) {
-                if (tokens[i] == params.tokenExchange) {
-                    maxAmountsInWithBPT[i] = params.tokenExchange.balanceOf(address(this));
-                    maxAmountsIn[i - 1] = maxAmountsInWithBPT[i];
-                    if (params.tokenExchange.allowance(address(this), address(_vault)) < maxAmountsInWithBPT[i]) {
-                        params.tokenExchange.safeApprove(address(_vault), type(uint256).max);
+                uint256 sendAmount = tokens[i].balanceOf(address(this));
+                if (sendAmount > 0) {
+                    maxAmountsInWithBPT[i] = sendAmount;
+                    maxAmountsIn[i - 1] = sendAmount;
+                    if (tokens[i].allowance(address(this), address(_vault)) < sendAmount) {
+                        tokens[i].safeApprove(address(_vault), type(uint256).max);
                     }
                 }
             }
