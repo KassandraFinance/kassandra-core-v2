@@ -17,11 +17,7 @@ const config: HardhatUserConfig = {
       allowUnlimitedContractSize: true,
       gas: "auto",
       forking: {
-        url: "https://polygon-rpc.com",
-        blockNumber: 39824641,
-      }
-    }
-  }
+        blockNumber: 43643777,
 };
 
 export default config;
