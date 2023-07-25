@@ -15,7 +15,6 @@
 pragma solidity ^0.7.0;
 pragma experimental ABIEncoderV2;
 
-import "@balancer-labs/v2-solidity-utils/contracts/openzeppelin/Ownable.sol";
 import "@balancer-labs/v2-solidity-utils/contracts/openzeppelin/SafeMath.sol";
 import "../balancer-v2-submodule/pkg/pool-weighted/contracts/managed/ManagedPoolFactory.sol";
 import "../balancer-v2-submodule/pkg/pool-weighted/contracts/managed/ManagedPool.sol";
@@ -25,11 +24,13 @@ import "./lib/KacyErrors.sol";
 
 import "./KassandraManagedPoolController.sol";
 
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+
 /**
  * @dev Deploys a new `ManagedPool` owned by a ManagedPoolController with the specified rights.
  * It uses the ManagedPoolFactory to deploy the pool.
  */
-contract KassandraControlledManagedPoolFactory is Ownable {
+contract KassandraControlledManagedPoolFactory is OwnableUpgradeable {
     using SafeERC20 for IERC20;
     using SafeMath for uint256;
 
@@ -77,7 +78,7 @@ contract KassandraControlledManagedPoolFactory is Ownable {
         IERC20[] tokens
     );
 
-    constructor(
+    function initialize(
         address factory,
         IPrivateInvestors privateInvestors,
         IAuthorizedManagers authorizationContract,
@@ -88,13 +89,14 @@ contract KassandraControlledManagedPoolFactory is Ownable {
         address swapProvider,
         address proxyProviderTransfer,
         IWETH weth
-    ) {
+    ) public initializer {
+        __Ownable_init();
         _managedPoolFactory = factory;
+        _privateInvestors = privateInvestors;
+        _authorizedManagers = authorizationContract;
+        _vault = vault;
         _kassandraRules = rules;
         _assetManager = assetManagerAddress;
-        _vault = vault;
-        _authorizedManagers = authorizationContract;
-        _privateInvestors = privateInvestors;
         _proxyInvest = proxyInvest;
         _swapProvider = swapProvider;
         _proxyProviderTransfer = proxyProviderTransfer;
@@ -140,7 +142,7 @@ contract KassandraControlledManagedPoolFactory is Ownable {
         _receiveTokens(joinParams, settingsParams, poolParams);
 
         IVault.JoinPoolRequest memory request;
-        
+
         {
             ManagedPool.ManagedPoolParams memory managedParams;
             managedParams.name = poolParams.name;
@@ -214,7 +216,7 @@ contract KassandraControlledManagedPoolFactory is Ownable {
     function getManagedPoolFactory() public view returns (address) {
         return _managedPoolFactory;
     }
-    
+
     function getKassandraRules() public view returns (address) {
         return _kassandraRules;
     }

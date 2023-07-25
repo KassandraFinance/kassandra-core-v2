@@ -141,8 +141,8 @@ describe("KassandraControlledManagedPoolFactory", () => {
         const ProxyInvest = await ethers.getContractFactory('ProxyInvest');
         const proxyInvest = await upgrades.deployProxy(ProxyInvest, [vault.address, ethers.constants.AddressZero]);
 
-        const ControllerFactory = await ethers.getContractFactory("KassandraControlledManagedPoolFactory");
-        const controllerFactory = await ControllerFactory.deploy(
+        const ControllerFactory = await ethers.getContractFactory('KassandraControlledManagedPoolFactory');
+        const controllerFactory = await upgrades.deployProxy(ControllerFactory, [ 
             managedPoolFactory.address,
             privateInvestors.address,
             authorizedManagers.address,
@@ -153,7 +153,7 @@ describe("KassandraControlledManagedPoolFactory", () => {
             SWAP_PROVIDER,
             SWAP_PROXY_PROVIDER,
             WMATIC_ADDRESS
-        ) as KassandraControlledManagedPoolFactory;
+        ]) as KassandraControlledManagedPoolFactory;
 
         await authorizedManagers.deployed();
         await authorizedManagers.setManager(manager.address, 2);
