@@ -121,15 +121,16 @@ contract ProxyInvest is OwnableUpgradeable {
 
         if (msg.value == 0) {
             params.tokenIn.safeTransferFrom(msg.sender, address(this), params.tokenAmountIn);
-            if (params.tokenIn.allowance(address(this), _proxyTransfer) < params.tokenAmountIn) {
-                params.tokenIn.safeApprove(_proxyTransfer, type(uint256).max);
-            }
         } else {
             _require(
                 msg.value == params.tokenAmountIn && address(params.tokenIn) == address(_WETH),
                 Errors.INSUFFICIENT_ETH
             );
             _WETH.deposit{ value: msg.value }();
+        }
+
+        if (params.tokenIn.allowance(address(this), _proxyTransfer) < params.tokenAmountIn) {
+            params.tokenIn.safeApprove(_proxyTransfer, type(uint256).max);
         }
 
         {
