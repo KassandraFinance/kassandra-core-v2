@@ -41,22 +41,15 @@ contract AuthorizedManagers is IAuthorizedManagers, OwnableUpgradeable {
         _factories[factory] = false;
     }
 
-    function getAllowedPoolsToCreate(address manager) external view returns (uint8) {
-        return _manager[manager];
+    function getAllowedPoolsToCreate(address) external pure returns (uint8) {
+        return type(uint8).max;
     }
 
-    function canCreatePool(address manager) external view override returns (bool) {
-        return _manager[manager] > 0;
+    function canCreatePool(address) external pure override returns (bool) {
+        return true;
     }
 
-    function setManager(address manager, uint8 qtdApproved) external onlyOwner {
-        require(manager != address(0), KacyErrors.ZERO_ADDRESS);
-        _manager[manager] = qtdApproved;
-        emit ManagerAllowanceUpdated(manager, qtdApproved);
-    }
+    function setManager(address, uint8) external onlyOwner {}
 
-    function managerCreatedPool(address manager) external override {
-        _require(_factories[msg.sender] && _manager[manager] > 0, Errors.SENDER_NOT_ALLOWED);
-        _manager[manager]--;
-    }
+    function managerCreatedPool(address) external pure override {}
 }
