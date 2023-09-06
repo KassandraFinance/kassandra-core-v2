@@ -61,6 +61,22 @@ contract KassandraWhitelist is IWhitelist, OwnableUpgradeable {
         return _IS_BLACKLIST;
     }
 
+    function addTokensToList(address[] calldata tokens) external onlyOwner {
+        uint256 length = tokens.length;
+        for (uint i = 0; i < length; i++) {
+            address token = tokens[i];
+            require(token != address(0), KacyErrors.ZERO_ADDRESS);
+            _require(_tokenList[token] == false, Errors.TOKEN_ALREADY_REGISTERED);
+
+            _tokenList[token] = true;
+
+            _tokens.push(token);
+            _indexToken[token] = _tokens.length;
+
+            emit TokenAdded(token);
+        }
+    }
+
     function addTokenToList(address token) external onlyOwner {
         require(token != address(0), KacyErrors.ZERO_ADDRESS);
         _require(_tokenList[token] == false, Errors.TOKEN_ALREADY_REGISTERED);
