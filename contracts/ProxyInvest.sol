@@ -48,6 +48,12 @@ contract ProxyInvest is OwnableUpgradeable {
         ALL_TOKENS_IN_FOR_EXACT_BPT_OUT
     }
 
+    enum ExitKind {
+        EXACT_BPT_IN_FOR_ONE_TOKEN_OUT,
+        EXACT_BPT_IN_FOR_TOKENS_OUT,
+        BPT_IN_FOR_EXACT_TOKENS_OUT
+    }
+
     event JoinedPool(
         bytes32 indexed poolId,
         address indexed recipient,
@@ -56,6 +62,13 @@ contract ProxyInvest is OwnableUpgradeable {
         uint256 amountToRecipient,
         uint256 amountToManager,
         uint256 amountToReferrer
+    );
+
+    event InvestOperationSwapProvider(
+        bytes32 indexed poolId,
+        bytes32 indexed type_,
+        address indexed token,
+        uint256 amount
     );
 
     address private _swapProvider;
@@ -99,6 +112,58 @@ contract ProxyInvest is OwnableUpgradeable {
 
     function setWETH(IWETH weth) external onlyOwner {
         _WETH = weth;
+    }
+
+    function exitPoolExactTokenInWithSwap(
+        address recipient,
+        address controller,
+        uint256 amountBptIn,
+        IERC20 tokenOut,
+        uint256 minAmountOut,
+        IVault.ExitPoolRequest calldata request,
+        bytes[] calldata datas
+    ) external returns (uint256 amountOut) {
+        _require(datas.length == request.assets.length - 1, Errors.INPUT_LENGTH_MISMATCH);
+
+        ExitKind exitKind = abi.decode(request.userData, (ExitKind));
+        _require(
+            exitKind == ExitKind.EXACT_BPT_IN_FOR_ONE_TOKEN_OUT || exitKind == ExitKind.EXACT_BPT_IN_FOR_TOKENS_OUT,
+            Errors.UNHANDLED_EXIT_KIND
+        );
+
+        address pool = IKassandraManagedPoolController(controller).pool();
+        bytes32 poolId = IManagedPool(pool).getPoolId();
+        IERC20(pool).transferFrom(msg.sender, address(this), amountBptIn);
+
+        _vault.exitPool(poolId, address(this), payable(address(this)), request);
+
+        uint256 size = datas.length;
+        bool success;
+        bytes memory response;
+        for (uint i = 0; i < size; i++) {
+            IERC20 tokenIn = IERC20(address(request.assets[i + 1]));
+            if (tokenIn != tokenOut) {
+                if (tokenIn.allowance(address(this), _proxyTransfer) < request.minAmountsOut[i + 1]) {
+                    tokenIn.safeApprove(_proxyTransfer, type(uint256).max);
+                }
+                (success, response) = _swapProvider.call(datas[i]);
+                require(success, string(response));
+                if (!success) {
+                    assembly {
+                        let ptr := mload(0x40)
+                        let _size := returndatasize()
+                        returndatacopy(ptr, 0, size)
+                        revert(ptr, _size)
+                    }
+                }
+            }
+        }
+
+        amountOut = tokenOut.balanceOf(address(this));
+        _require(amountOut >= minAmountOut, Errors.EXIT_BELOW_MIN);
+        tokenOut.safeTransfer(recipient, amountOut);
+
+        emit InvestOperationSwapProvider(poolId, bytes32("exit_swap"), address(tokenOut), amountOut);
     }
 
     function joinPoolExactTokenInWithSwap(
@@ -180,14 +245,20 @@ contract ProxyInvest is OwnableUpgradeable {
             fromInternalBalance: false
         });
 
-        return
-            _joinPool(
+        (amountToRecipient, amountToReferrer, amountToManager, amountsIn) = _joinPool(
                 params.recipient,
                 params.referrer,
                 params.controller,
                 IKassandraManagedPoolController(params.controller).pool(),
                 request
-            );
+        );
+
+        emit InvestOperationSwapProvider(
+            IManagedPool(IKassandraManagedPoolController(params.controller).pool()).getPoolId(),
+            bytes32("join_swap"),
+            address(params.tokenIn),
+            params.tokenAmountIn
+        );
     }
 
     function joinPool(
