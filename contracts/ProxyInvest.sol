@@ -147,7 +147,6 @@ contract ProxyInvest is OwnableUpgradeable {
                     tokenIn.safeApprove(_proxyTransfer, type(uint256).max);
                 }
                 (success, response) = _swapProvider.call(datas[i]);
-                require(success, string(response));
                 if (!success) {
                     assembly {
                         let ptr := mload(0x40)
