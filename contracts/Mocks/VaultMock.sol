@@ -25,11 +25,20 @@ import "./ManagedPoolMock.sol";
 contract VaultMock {
     using SafeERC20 for IERC20;
 
+    enum PoolBalanceOpKind { WITHDRAW, DEPOSIT, UPDATE }
+
     struct ExitPoolRequest {
         IAsset[] assets;
         uint256[] minAmountsOut;
         bytes userData;
         bool toInternalBalance;
+    }
+
+        struct PoolBalanceOp {
+        PoolBalanceOpKind kind;
+        bytes32 poolId;
+        IERC20 token;
+        uint256 amount;
     }
 
     bytes32 private _savedPoolId;
@@ -119,5 +128,9 @@ contract VaultMock {
         for (uint i = 1; i < _tokens.length; i++) {
             IERC20(_tokens[i]).transfer(recipient, _amoutTokensOut[i]);
         }
+    }
+
+    function managePoolBalance(PoolBalanceOp[] memory ops) external {
+
     }
 }
