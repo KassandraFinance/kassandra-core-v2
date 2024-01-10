@@ -1,7 +1,7 @@
 import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 import { expect } from "chai";
 import { ethers, network, upgrades } from "hardhat";
-import { AuthorizedManagers, KacyAssetManager, KassandraControlledManagedPoolFactory, KassandraRules, KassandraWhitelist, PrivateInvestorsMock } from "../typechain-types";
+import { AuthorizedManagers, KacyAssetManager, KassandraControlledManagedPoolFactory, KassandraControllerList, KassandraRules, KassandraWhitelist, PrivateInvestorsMock } from "../typechain-types";
 import { polygon } from '../scripts/addressess'
 
 const VAULT_ADDRESS = '0xBA12222222228d8Ba445958a75a0704d566BF2C8';
@@ -20,7 +20,6 @@ describe("KassandraControlledManagedPoolFactory", () => {
             params: [VAULT_ADDRESS],
         });
         const vaultSigner = await ethers.getSigner(VAULT_ADDRESS);
-
 
         const AssetManagerDeployer = await ethers.getContractFactory("KacyAssetManager");
         const assetManager = await upgrades.deployProxy(AssetManagerDeployer) as KacyAssetManager;
@@ -64,6 +63,11 @@ describe("KassandraControlledManagedPoolFactory", () => {
             SWAP_PROXY_PROVIDER,
             WMATIC_ADDRESS
         ]) as KassandraControlledManagedPoolFactory;
+
+        const ControllerList = await ethers.getContractFactory("KassandraControllerList");
+        const controllerList = await upgrades.deployProxy(ControllerList) as KassandraControllerList;
+        await controllerList.setFactory(controllerFactory.address, true);
+        await controllerFactory.setKassandraControllerList(controllerList.address);
 
         vault.mockJoinKind(0)
 
@@ -151,6 +155,7 @@ describe("KassandraControlledManagedPoolFactory", () => {
             assetManager,
             authorizedManagers,
             privateInvestors,
+            controllerList,
             amountDai,
             amountMatic,
             dai,
@@ -265,6 +270,7 @@ describe("KassandraControlledManagedPoolFactory", () => {
             authorizedManagers,
             privateInvestors,
             kassandraRules,
+            controllerList,
             dai,
             matic,
             amountDai,
@@ -323,6 +329,7 @@ describe("KassandraControlledManagedPoolFactory", () => {
         expect(await managedPoolController.kassandraRules()).equal(kassandraRules.address);
         expect(await managedPoolController.isPrivatePool()).false;
         expect(await managedPoolController.getWhitelist()).equal(pool.whitelist);
+        expect(await controllerList.isKassandraController(controllerAddress)).true
     })
 
     it.skip("should create pool and controller with one token", async () => {
