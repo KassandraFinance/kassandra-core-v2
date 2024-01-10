@@ -22,15 +22,19 @@ import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
 import "./interfaces/IKacyAssetManager.sol";
 import "./interfaces/IPoolController.sol";
+import "./interfaces/IKassandraControllerList.sol";
 import "./lib/KacyErrors.sol";
 
 contract KacyAssetManager is IKacyAssetManager, OwnableUpgradeable {
     using SafeERC20 for IERC20;
+
+    IKassandraControllerList private _kassandraControllerList;
     
     /**
      * @dev Only the controller contract is allowed to modify its own pool
      */
     modifier onlyController(bytes32 vaultPoolId) {
+        _require(_kassandraControllerList.isKassandraController(msg.sender),  Errors.SENDER_NOT_ALLOWED);
         bytes32 requesterVaultPoolId = IManagedPool(IPoolController(msg.sender).pool()).getPoolId();
         _require(vaultPoolId == requesterVaultPoolId, Errors.SENDER_NOT_ALLOWED);
         _;
@@ -38,6 +42,10 @@ contract KacyAssetManager is IKacyAssetManager, OwnableUpgradeable {
 
     function initialize() public initializer {
         __Ownable_init();
+    }
+
+    function setControllerList(address controllerList) external onlyOwner {
+        _kassandraControllerList = IKassandraControllerList(controllerList);
     }
 
     function addToken(
