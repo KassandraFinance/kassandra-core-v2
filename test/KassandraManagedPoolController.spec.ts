@@ -126,6 +126,7 @@ describe("KassandraManagedPoolController", () => {
             await expect(kassandraManagedPoolController.setPublicPool()).to.revertedWith("BAL#426");
             await expect(kassandraManagedPoolController.addAllowedAddresses([investor.address])).to.revertedWith("BAL#426");
             await expect(kassandraManagedPoolController.removeAllowedAddresses([investor.address])).to.revertedWith("BAL#426");
+            await expect(kassandraManagedPoolController.setJoinFees({feesToManager: (0.1e18).toString(), feesToReferral: (0.1e18).toString()})).to.revertedWith("BAL#426");
         })
 
         it("should return a timedelta for getMinWeightChangeDuration", async () => {
