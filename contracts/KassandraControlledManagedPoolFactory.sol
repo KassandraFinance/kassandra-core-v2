@@ -60,10 +60,11 @@ contract KassandraControlledManagedPoolFactory is OwnableUpgradeable {
     IVault private _vault;
     IPrivateInvestors private _privateInvestors;
     IAuthorizedManagers private _authorizedManagers;
-    IKassandraControllerList private _kassandraControllerList;
 
     mapping(address => bool) private _isPoolFromFactory;
 
+    IKassandraControllerList private _kassandraControllerList;
+    
     event KassandraPoolCreated(
         address indexed caller,
         bytes32 indexed vaultPoolId,
