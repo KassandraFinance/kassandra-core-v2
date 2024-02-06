@@ -1,7 +1,7 @@
 import { ethers, network, upgrades } from 'hardhat';
 import { expect } from 'chai';
 import { defaultAbiCoder } from '@ethersproject/abi';
-import { ProxyInvest } from '../typechain-types';
+import { KassandraControllerList, ProxyInvest } from '../typechain-types';
 import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
 import { ParaSwap } from './utils/getDataSwap';
 
@@ -88,6 +88,12 @@ describe('ProxyInvest', () => {
     const initBalanceMATIC = await wmatic.balanceOf(account.address);
     const initBalanceDAI = await dai.balanceOf(account.address);
     const initBalanceTokenIn = await tokenIn.balanceOf(account.address);
+
+
+    const ControllerList = await ethers.getContractFactory("KassandraControllerList");
+    const controllerList = await upgrades.deployProxy(ControllerList) as KassandraControllerList;
+    await controllerList.setControllers([controller.address]);
+    await proxyInvest.setKassandraControllerList(controllerList.address);
 
     return {
       proxyInvest,

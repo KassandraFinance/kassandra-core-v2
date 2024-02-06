@@ -25,6 +25,7 @@ import "@balancer-labs/v2-solidity-utils/contracts/math/FixedPoint.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
 import "./interfaces/IKassandraManagedPoolController.sol";
+import "./interfaces/IKassandraControllerList.sol";
 
 contract ProxyInvest is OwnableUpgradeable {
     using SafeERC20 for IERC20;
@@ -75,6 +76,7 @@ contract ProxyInvest is OwnableUpgradeable {
     IVault private _vault;
     IWETH private _WETH;
     address private _proxyTransfer;
+    IKassandraControllerList private _controllerList;
 
     function initialize(IVault vault, address swapProvider) public initializer {
         __Ownable_init();
@@ -98,6 +100,10 @@ contract ProxyInvest is OwnableUpgradeable {
         return _proxyTransfer;
     }
 
+    function getKassandraControllerList() external view returns (IKassandraControllerList) {
+        return _controllerList;
+    }
+
     function setProxyTransfer(address proxyTransfer) external onlyOwner {
         _proxyTransfer = proxyTransfer;
     }
@@ -114,6 +120,10 @@ contract ProxyInvest is OwnableUpgradeable {
         _WETH = weth;
     }
 
+    function setKassandraControllerList(IKassandraControllerList controllerList) external onlyOwner {
+        _controllerList = controllerList;
+    }
+
     function exitPoolExactTokenInWithSwap(
         address recipient,
         address controller,
@@ -123,6 +133,7 @@ contract ProxyInvest is OwnableUpgradeable {
         IVault.ExitPoolRequest calldata request,
         bytes[] calldata datas
     ) external returns (uint256 amountOut) {
+        _require(_controllerList.isKassandraController(controller), Errors.ADDRESS_NOT_ALLOWLISTED);
         _require(datas.length == request.assets.length - 1, Errors.INPUT_LENGTH_MISMATCH);
 
         ExitKind exitKind = abi.decode(request.userData, (ExitKind));
@@ -133,7 +144,7 @@ contract ProxyInvest is OwnableUpgradeable {
 
         address pool = IKassandraManagedPoolController(controller).pool();
         bytes32 poolId = IManagedPool(pool).getPoolId();
-        IERC20(pool).transferFrom(msg.sender, address(this), amountBptIn);
+        IERC20(pool).safeTransferFrom(msg.sender, address(this), amountBptIn);
 
         _vault.exitPool(poolId, address(this), payable(address(this)), request);
 
@@ -178,6 +189,7 @@ contract ProxyInvest is OwnableUpgradeable {
             uint256[] memory amountsIn
         )
     {
+        _require(_controllerList.isKassandraController(params.controller), Errors.ADDRESS_NOT_ALLOWLISTED);
         _require(
             IKassandraManagedPoolController(params.controller).isAllowedAddress(msg.sender),
             Errors.SENDER_NOT_ALLOWED
@@ -245,11 +257,11 @@ contract ProxyInvest is OwnableUpgradeable {
         });
 
         (amountToRecipient, amountToReferrer, amountToManager, amountsIn) = _joinPool(
-                params.recipient,
-                params.referrer,
-                params.controller,
-                IKassandraManagedPoolController(params.controller).pool(),
-                request
+            params.recipient,
+            params.referrer,
+            params.controller,
+            IKassandraManagedPoolController(params.controller).pool(),
+            request
         );
 
         emit InvestOperationSwapProvider(
@@ -275,6 +287,7 @@ contract ProxyInvest is OwnableUpgradeable {
             uint256[] memory amountsIn
         )
     {
+        _require(_controllerList.isKassandraController(controller), Errors.ADDRESS_NOT_ALLOWLISTED);
         address _pool = IKassandraManagedPoolController(controller).pool();
         _require(IKassandraManagedPoolController(controller).isAllowedAddress(msg.sender), Errors.SENDER_NOT_ALLOWED);
 
@@ -460,5 +473,9 @@ contract ProxyInvest is OwnableUpgradeable {
             amountsIn[i] = request.maxAmountsIn[i].sub(amountGiveBack);
             tokenIn.safeTransfer(msg.sender, amountGiveBack);
         }
+    }
+
+    function withdrawFunds(IERC20 token, address to) external onlyOwner {
+        token.safeTransfer(to, token.balanceOf(address(this)));
     }
 }
