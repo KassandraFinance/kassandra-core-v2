@@ -16,18 +16,25 @@ pragma solidity >=0.7.0 <0.9.0;
 
 import "./BaseControllerMock.sol";
 
+import "../interfaces/IKacyAssetManager.sol";
+
 contract ControllerMock is BaseControllerMock {
     struct FeesPercentages {
         uint64 feesToManager;
         uint64 feesToReferral;
     }
-    
+
     address private _owner;
     address private _member;
     FeesPercentages private _fees;
+    IKacyAssetManager kacyAssetManager;
 
     constructor(address owner, address pool) BaseControllerMock(pool) {
         _owner = owner;
+    }
+
+    function setKacyAssetManager(address kacyAsset) external {
+        kacyAssetManager = IKacyAssetManager(kacyAsset);
     }
 
     function setMember(address member) external {
@@ -57,5 +64,17 @@ contract ControllerMock is BaseControllerMock {
 
     function getJoinFees() external view returns (uint64 feesToManager, uint64 feesToReferral) {
         return (_fees.feesToManager, _fees.feesToReferral);
+    }
+
+    function addToken(
+        IERC20 tokenToAdd,
+        uint256,
+        uint256 tokenToAddBalance,
+        address,
+        address,
+        IVault vault,
+        bytes32 vaultPoolId
+    ) external {
+        kacyAssetManager.addToken(tokenToAdd, tokenToAddBalance, vault, vaultPoolId);
     }
 }

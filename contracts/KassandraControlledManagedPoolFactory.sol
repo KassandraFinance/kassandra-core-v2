@@ -20,6 +20,7 @@ import "../balancer-v2-submodule/pkg/pool-weighted/contracts/managed/ManagedPool
 import "../balancer-v2-submodule/pkg/pool-weighted/contracts/managed/ManagedPool.sol";
 
 import "./interfaces/IAuthorizedManagers.sol";
+import "./interfaces/IKassandraControllerList.sol";
 import "./lib/KacyErrors.sol";
 
 import "./KassandraManagedPoolController.sol";
@@ -62,6 +63,8 @@ contract KassandraControlledManagedPoolFactory is OwnableUpgradeable {
 
     mapping(address => bool) private _isPoolFromFactory;
 
+    IKassandraControllerList private _kassandraControllerList;
+    
     event KassandraPoolCreated(
         address indexed caller,
         bytes32 indexed vaultPoolId,
@@ -199,6 +202,7 @@ contract KassandraControlledManagedPoolFactory is OwnableUpgradeable {
         _authorizedManagers.managerCreatedPool(msg.sender);
         _privateInvestors.setController(address(poolController));
 
+        _kassandraControllerList.setController(address(poolController));
         _isPoolFromFactory[pool] = true;
     }
 
@@ -251,6 +255,14 @@ contract KassandraControlledManagedPoolFactory is OwnableUpgradeable {
 
     function getAuthorizedManagers() public view returns (address) {
         return address(_authorizedManagers);
+    }
+
+    function getKassandraControllerList() public view returns (address) {
+        return address(_kassandraControllerList);
+    }
+
+    function setKassandraControllerList(address kassandraControllerList) external onlyOwner {
+        _kassandraControllerList = IKassandraControllerList(kassandraControllerList);
     }
 
     function _receiveTokens(
