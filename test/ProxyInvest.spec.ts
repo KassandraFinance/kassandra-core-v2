@@ -119,6 +119,7 @@ describe('ProxyInvest', () => {
       initBalanceDAI,
       initBalanceTokenIn,
       withdrawFee,
+      controller,
     };
   }
 
@@ -536,7 +537,7 @@ describe('ProxyInvest', () => {
       expect(await ethers.provider.getBalance(proxyInvest.address)).to.be.equals(ethers.BigNumber.from(0));
     });
 
-    it.skip('should exit pool', async () => {
+    it.skip('should exit pool and collect withdraw fee', async () => {
       const { proxyInvest, vault, pool, account, tokenIn, poolController, initBalanceTokenIn, withdrawFee, kassandra } =
         await loadFixture(deployProxyInvest);
 
@@ -594,6 +595,66 @@ describe('ProxyInvest', () => {
       expect(lastBalance.sub(initBalanceTokenIn).gt(0)).to.true;
       expect(lastBalance.sub(initBalanceTokenIn).gte(minAmountWithoutFee)).to.true;
       expect(lastBalanceKassandra.eq(amountToKassandra)).to.true;
+    });
+
+    it.skip('should exit pool', async () => {
+      const { proxyInvest, vault, pool, account, tokenIn, poolController, initBalanceTokenIn, kassandra, controller } =
+        await loadFixture(deployProxyInvest);
+
+      await controller.setIsPrivatePool(true);
+
+      const swapProvider = new ParaSwap();
+
+      const amounts = [ethers.utils.parseEther('1'), ethers.utils.parseEther('1')];
+      const txs = [];
+      let minAmountOut = ethers.BigNumber.from(0);
+      for (let i = 0; i < settingsParams.tokens.length; i++) {
+        const res = await swapProvider.getAmountsOut({
+          amount: amounts[i].toString(),
+          chainId: '137',
+          destDecimals: '18',
+          destToken: tokenIn.address,
+          srcDecimals: '18',
+          srcToken: settingsParams.tokens[i],
+        });
+        txs.push(res.transactionsDataTx);
+        minAmountOut = minAmountOut.add(res.amountsTokenIn);
+      }
+
+      const datas = await swapProvider.getDatasTx('137', proxyInvest.address, '1', txs);
+
+      await vault.mockPoolAddress(pool.address);
+      await vault.mockPoolTokensAmountOut([0, ...amounts]);
+
+      const exitKind = 1;
+      const bptAmount = ethers.BigNumber.from((1e18).toString());
+      const userData = defaultAbiCoder.encode(['uint256', 'uint256'], [exitKind, bptAmount]);
+      const request = {
+        assets: [pool.address, ...settingsParams.tokens],
+        minAmountsOut: [0, ...amounts],
+        userData,
+        toInternalBalance: false,
+      };
+      await pool.mint(account.address, bptAmount);
+      await (await pool.connect(account).approve(proxyInvest.address, bptAmount)).wait();
+
+      await proxyInvest
+        .connect(account)
+        .exitPoolExactTokenInWithSwap(
+          account.address,
+          poolController.address,
+          bptAmount,
+          tokenIn.address,
+          minAmountOut,
+          request,
+          datas
+        );
+
+      const lastBalance = await tokenIn.balanceOf(account.address);
+      const lastBalanceKassandra = await tokenIn.balanceOf(kassandra.address);
+      expect(lastBalance.sub(initBalanceTokenIn).gt(0)).to.true;
+      expect(lastBalance.sub(initBalanceTokenIn).gte(minAmountOut)).to.true;
+      expect(lastBalanceKassandra.eq(0)).to.true;
     });
   });
 });

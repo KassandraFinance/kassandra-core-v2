@@ -73,7 +73,12 @@ contract ProxyInvest is OwnableUpgradeable {
     );
 
     event WithdrawFeeChanged(uint256 newWithdrawFee);
-    event CollectedWithdrawFee(bytes32 indexed poolId, address indexed token, uint256 amountCollected, uint256 withdrawFee);
+    event CollectedWithdrawFee(
+        bytes32 indexed poolId,
+        address indexed token,
+        uint256 amountCollected,
+        uint256 withdrawFee
+    );
 
     address private _swapProvider;
     IVault private _vault;
@@ -194,15 +199,20 @@ contract ProxyInvest is OwnableUpgradeable {
         }
 
         uint256 amountTokenOut = tokenOut.balanceOf(address(this));
-        uint256 amountToKassandra = amountTokenOut.mulDown(_withdrawFee);
+        uint256 amountToKassandra = 0;
+
+        if (!IKassandraManagedPoolController(controller).isPrivatePool()) {
+            amountToKassandra = amountTokenOut.mulDown(_withdrawFee);
+            tokenOut.safeTransfer(_kassandra, amountToKassandra);
+            emit CollectedWithdrawFee(poolId, address(tokenOut), amountToKassandra, _withdrawFee);
+        }
+
         amountOut = amountTokenOut - amountToKassandra;
 
         _require(amountOut >= minAmountOut, Errors.EXIT_BELOW_MIN);
         tokenOut.safeTransfer(recipient, amountOut);
-        tokenOut.safeTransfer(_kassandra, amountToKassandra);
 
         emit InvestOperationSwapProvider(poolId, bytes32("exit_swap"), address(tokenOut), amountOut);
-        emit CollectedWithdrawFee(poolId, address(tokenOut), amountToKassandra, _withdrawFee);
     }
 
     function joinPoolExactTokenInWithSwap(
