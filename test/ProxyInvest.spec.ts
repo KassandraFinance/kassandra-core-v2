@@ -537,7 +537,7 @@ describe('ProxyInvest', () => {
       expect(await ethers.provider.getBalance(proxyInvest.address)).to.be.equals(ethers.BigNumber.from(0));
     });
 
-    it.skip('should exit pool and collect withdraw fee', async () => {
+    it('should exit pool and collect withdraw fee', async () => {
       const { proxyInvest, vault, pool, account, tokenIn, poolController, initBalanceTokenIn, withdrawFee, kassandra } =
         await loadFixture(deployProxyInvest);
 
@@ -597,7 +597,7 @@ describe('ProxyInvest', () => {
       expect(lastBalanceKassandra.eq(amountToKassandra)).to.true;
     });
 
-    it.skip('should exit pool', async () => {
+    it('should exit pool', async () => {
       const { proxyInvest, vault, pool, account, tokenIn, poolController, initBalanceTokenIn, kassandra, controller } =
         await loadFixture(deployProxyInvest);
 
