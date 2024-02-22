@@ -39,6 +39,11 @@
       "address": "0xbBa46B512a158aF0e41111109617c660Ff903819",
       "txHash": "0x840b51390ba9d783da6cc83e4b81c6365fe26f59d4e800b244c0273bcfcbe150",
       "kind": "transparent"
+    },
+    {
+      "address": "0x35D2B1b46298E77D1d2Bd249e9bb48ACCfE40A68",
+      "txHash": "0x6cfc43408952d990fdf4afc57b47125f7ea66ac37f39604873bd76588982f642",
+      "kind": "transparent"
     }
   ],
   "impls": {
@@ -782,7 +787,7 @@
             "label": "_privateInvestors",
             "offset": 0,
             "slot": "109",
-            "type": "t_contract(IPrivateInvestors)24237",
+            "type": "t_contract(IPrivateInvestors)25315",
             "contract": "KassandraControlledManagedPoolFactory",
             "src": "contracts/KassandraControlledManagedPoolFactory.sol:60"
           },
@@ -790,7 +795,7 @@
             "label": "_authorizedManagers",
             "offset": 0,
             "slot": "110",
-            "type": "t_contract(IAuthorizedManagers)24080",
+            "type": "t_contract(IAuthorizedManagers)25142",
             "contract": "KassandraControlledManagedPoolFactory",
             "src": "contracts/KassandraControlledManagedPoolFactory.sol:61"
           },
@@ -820,11 +825,558 @@
             "label": "bool",
             "numberOfBytes": "1"
           },
-          "t_contract(IAuthorizedManagers)24080": {
+          "t_contract(IAuthorizedManagers)25142": {
             "label": "contract IAuthorizedManagers",
             "numberOfBytes": "20"
           },
-          "t_contract(IPrivateInvestors)24237": {
+          "t_contract(IPrivateInvestors)25315": {
+            "label": "contract IPrivateInvestors",
+            "numberOfBytes": "20"
+          },
+          "t_contract(IVault)2558": {
+            "label": "contract IVault",
+            "numberOfBytes": "20"
+          },
+          "t_contract(IWETH)1592": {
+            "label": "contract IWETH",
+            "numberOfBytes": "20"
+          },
+          "t_mapping(t_address,t_bool)": {
+            "label": "mapping(address => bool)",
+            "numberOfBytes": "32"
+          },
+          "t_uint256": {
+            "label": "uint256",
+            "numberOfBytes": "32"
+          }
+        }
+      }
+    },
+    "9b293f0f8d7dc20da13ddcea95121d02fbae0e5982e2c1068c2d7c56742e355d": {
+      "address": "0x71DC31B4601120cF089a74C260BA421f72c9BBc4",
+      "txHash": "0x9e855f528cef83922db5bbc66b60664e91a1c71b40dee630fd7aa3e64171176b",
+      "layout": {
+        "solcVersion": "0.7.1",
+        "storage": [
+          {
+            "label": "_initialized",
+            "offset": 0,
+            "slot": "0",
+            "type": "t_bool",
+            "contract": "Initializable",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/Initializable.sol:25"
+          },
+          {
+            "label": "_initializing",
+            "offset": 1,
+            "slot": "0",
+            "type": "t_bool",
+            "contract": "Initializable",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/Initializable.sol:30"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "1",
+            "type": "t_array(t_uint256)50_storage",
+            "contract": "ContextUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol:31"
+          },
+          {
+            "label": "_owner",
+            "offset": 0,
+            "slot": "51",
+            "type": "t_address",
+            "contract": "OwnableUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol:20"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "52",
+            "type": "t_array(t_uint256)49_storage",
+            "contract": "OwnableUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol:74"
+          },
+          {
+            "label": "_swapProvider",
+            "offset": 0,
+            "slot": "101",
+            "type": "t_address",
+            "contract": "ProxyInvest",
+            "src": "contracts/ProxyInvest.sol:74"
+          },
+          {
+            "label": "_vault",
+            "offset": 0,
+            "slot": "102",
+            "type": "t_contract(IVault)1709",
+            "contract": "ProxyInvest",
+            "src": "contracts/ProxyInvest.sol:75"
+          },
+          {
+            "label": "_WETH",
+            "offset": 0,
+            "slot": "103",
+            "type": "t_contract(IWETH)914",
+            "contract": "ProxyInvest",
+            "src": "contracts/ProxyInvest.sol:76"
+          },
+          {
+            "label": "_proxyTransfer",
+            "offset": 0,
+            "slot": "104",
+            "type": "t_address",
+            "contract": "ProxyInvest",
+            "src": "contracts/ProxyInvest.sol:77"
+          }
+        ],
+        "types": {
+          "t_address": {
+            "label": "address",
+            "numberOfBytes": "20"
+          },
+          "t_array(t_uint256)49_storage": {
+            "label": "uint256[49]",
+            "numberOfBytes": "1568"
+          },
+          "t_array(t_uint256)50_storage": {
+            "label": "uint256[50]",
+            "numberOfBytes": "1600"
+          },
+          "t_bool": {
+            "label": "bool",
+            "numberOfBytes": "1"
+          },
+          "t_contract(IVault)1709": {
+            "label": "contract IVault",
+            "numberOfBytes": "20"
+          },
+          "t_contract(IWETH)914": {
+            "label": "contract IWETH",
+            "numberOfBytes": "20"
+          },
+          "t_uint256": {
+            "label": "uint256",
+            "numberOfBytes": "32"
+          }
+        }
+      }
+    },
+    "a75fe7e764e576ec80d77525e302730b1c9da02b44339e2be2835f2c20be6c13": {
+      "address": "0xf452ddf292a4395bee8AcbDd39655638b20911D9",
+      "txHash": "0x16719806fe23c0a7074dd944b08ade0c2b5558a5a3cde3e7331851f2505dfaac",
+      "layout": {
+        "solcVersion": "0.7.1",
+        "storage": [
+          {
+            "label": "_initialized",
+            "offset": 0,
+            "slot": "0",
+            "type": "t_bool",
+            "contract": "Initializable",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/Initializable.sol:25"
+          },
+          {
+            "label": "_initializing",
+            "offset": 1,
+            "slot": "0",
+            "type": "t_bool",
+            "contract": "Initializable",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/Initializable.sol:30"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "1",
+            "type": "t_array(t_uint256)50_storage",
+            "contract": "ContextUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol:31"
+          },
+          {
+            "label": "_owner",
+            "offset": 0,
+            "slot": "51",
+            "type": "t_address",
+            "contract": "OwnableUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol:20"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "52",
+            "type": "t_array(t_uint256)49_storage",
+            "contract": "OwnableUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol:74"
+          }
+        ],
+        "types": {
+          "t_address": {
+            "label": "address",
+            "numberOfBytes": "20"
+          },
+          "t_array(t_uint256)49_storage": {
+            "label": "uint256[49]",
+            "numberOfBytes": "1568"
+          },
+          "t_array(t_uint256)50_storage": {
+            "label": "uint256[50]",
+            "numberOfBytes": "1600"
+          },
+          "t_bool": {
+            "label": "bool",
+            "numberOfBytes": "1"
+          },
+          "t_uint256": {
+            "label": "uint256",
+            "numberOfBytes": "32"
+          }
+        }
+      }
+    },
+    "a4e441367c887741601eece47d73c2ae582c32d9257fd249ff3b442ef5863dbb": {
+      "address": "0xB153A3c2a2b0b114251977Bd2417037C77C0b277",
+      "txHash": "0x8e7683e0b69680989ce79f07bb089708f205adc1b6d1061e57e7f485957f3e51",
+      "layout": {
+        "solcVersion": "0.7.1",
+        "storage": [
+          {
+            "label": "_initialized",
+            "offset": 0,
+            "slot": "0",
+            "type": "t_bool",
+            "contract": "Initializable",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/Initializable.sol:25"
+          },
+          {
+            "label": "_initializing",
+            "offset": 1,
+            "slot": "0",
+            "type": "t_bool",
+            "contract": "Initializable",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/Initializable.sol:30"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "1",
+            "type": "t_array(t_uint256)50_storage",
+            "contract": "ContextUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol:31"
+          },
+          {
+            "label": "_owner",
+            "offset": 0,
+            "slot": "51",
+            "type": "t_address",
+            "contract": "OwnableUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol:20"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "52",
+            "type": "t_array(t_uint256)49_storage",
+            "contract": "OwnableUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol:74"
+          },
+          {
+            "label": "_isKassandraController",
+            "offset": 0,
+            "slot": "101",
+            "type": "t_mapping(t_address,t_bool)",
+            "contract": "KassandraControllerList",
+            "src": "contracts/KassandraControllerList.sol:24"
+          },
+          {
+            "label": "_factories",
+            "offset": 0,
+            "slot": "102",
+            "type": "t_mapping(t_address,t_bool)",
+            "contract": "KassandraControllerList",
+            "src": "contracts/KassandraControllerList.sol:25"
+          }
+        ],
+        "types": {
+          "t_address": {
+            "label": "address",
+            "numberOfBytes": "20"
+          },
+          "t_array(t_uint256)49_storage": {
+            "label": "uint256[49]",
+            "numberOfBytes": "1568"
+          },
+          "t_array(t_uint256)50_storage": {
+            "label": "uint256[50]",
+            "numberOfBytes": "1600"
+          },
+          "t_bool": {
+            "label": "bool",
+            "numberOfBytes": "1"
+          },
+          "t_mapping(t_address,t_bool)": {
+            "label": "mapping(address => bool)",
+            "numberOfBytes": "32"
+          },
+          "t_uint256": {
+            "label": "uint256",
+            "numberOfBytes": "32"
+          }
+        }
+      }
+    },
+    "fabb9dac30749617c471e20aa9e9701299088d8fad59a3efcd99d8970dbfa266": {
+      "address": "0x4323801abDB2CF79F98C01544a6375dd915Fa18c",
+      "txHash": "0x1128341f1dfc4a14fbb00cf8eb8ed01f45583376a3d6070153dc2a89a2b3becb",
+      "layout": {
+        "solcVersion": "0.7.1",
+        "storage": [
+          {
+            "label": "_initialized",
+            "offset": 0,
+            "slot": "0",
+            "type": "t_bool",
+            "contract": "Initializable",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/Initializable.sol:25"
+          },
+          {
+            "label": "_initializing",
+            "offset": 1,
+            "slot": "0",
+            "type": "t_bool",
+            "contract": "Initializable",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/Initializable.sol:30"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "1",
+            "type": "t_array(t_uint256)50_storage",
+            "contract": "ContextUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol:31"
+          },
+          {
+            "label": "_owner",
+            "offset": 0,
+            "slot": "51",
+            "type": "t_address",
+            "contract": "OwnableUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol:20"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "52",
+            "type": "t_array(t_uint256)49_storage",
+            "contract": "OwnableUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol:74"
+          },
+          {
+            "label": "_kassandraControllerList",
+            "offset": 0,
+            "slot": "101",
+            "type": "t_contract(IKassandraControllerList)25337",
+            "contract": "KacyAssetManager",
+            "src": "contracts/KacyAssetManager.sol:31"
+          }
+        ],
+        "types": {
+          "t_address": {
+            "label": "address",
+            "numberOfBytes": "20"
+          },
+          "t_array(t_uint256)49_storage": {
+            "label": "uint256[49]",
+            "numberOfBytes": "1568"
+          },
+          "t_array(t_uint256)50_storage": {
+            "label": "uint256[50]",
+            "numberOfBytes": "1600"
+          },
+          "t_bool": {
+            "label": "bool",
+            "numberOfBytes": "1"
+          },
+          "t_contract(IKassandraControllerList)25337": {
+            "label": "contract IKassandraControllerList",
+            "numberOfBytes": "20"
+          },
+          "t_uint256": {
+            "label": "uint256",
+            "numberOfBytes": "32"
+          }
+        }
+      }
+    },
+    "9e987d57cf91aa5b571c4be5a98b4f09cbb8a4cfb6a764b4565729a37b66df15": {
+      "address": "0x3b43A360a9b7a5e421a166c42C13B33669B40Bb5",
+      "txHash": "0xf66831aa8e7ebc444782c75022c5c53461fa00159e854238ae331d5b2d875d31",
+      "layout": {
+        "solcVersion": "0.7.1",
+        "storage": [
+          {
+            "label": "_initialized",
+            "offset": 0,
+            "slot": "0",
+            "type": "t_bool",
+            "contract": "Initializable",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/Initializable.sol:25"
+          },
+          {
+            "label": "_initializing",
+            "offset": 1,
+            "slot": "0",
+            "type": "t_bool",
+            "contract": "Initializable",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/Initializable.sol:30"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "1",
+            "type": "t_array(t_uint256)50_storage",
+            "contract": "ContextUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol:31"
+          },
+          {
+            "label": "_owner",
+            "offset": 0,
+            "slot": "51",
+            "type": "t_address",
+            "contract": "OwnableUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol:20"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "52",
+            "type": "t_array(t_uint256)49_storage",
+            "contract": "OwnableUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol:74"
+          },
+          {
+            "label": "_managedPoolFactory",
+            "offset": 0,
+            "slot": "101",
+            "type": "t_address",
+            "contract": "KassandraControlledManagedPoolFactory",
+            "src": "contracts/KassandraControlledManagedPoolFactory.sol:52"
+          },
+          {
+            "label": "_kassandraRules",
+            "offset": 0,
+            "slot": "102",
+            "type": "t_address",
+            "contract": "KassandraControlledManagedPoolFactory",
+            "src": "contracts/KassandraControlledManagedPoolFactory.sol:53"
+          },
+          {
+            "label": "_assetManager",
+            "offset": 0,
+            "slot": "103",
+            "type": "t_address",
+            "contract": "KassandraControlledManagedPoolFactory",
+            "src": "contracts/KassandraControlledManagedPoolFactory.sol:54"
+          },
+          {
+            "label": "_proxyInvest",
+            "offset": 0,
+            "slot": "104",
+            "type": "t_address",
+            "contract": "KassandraControlledManagedPoolFactory",
+            "src": "contracts/KassandraControlledManagedPoolFactory.sol:55"
+          },
+          {
+            "label": "_swapProvider",
+            "offset": 0,
+            "slot": "105",
+            "type": "t_address",
+            "contract": "KassandraControlledManagedPoolFactory",
+            "src": "contracts/KassandraControlledManagedPoolFactory.sol:56"
+          },
+          {
+            "label": "_proxyProviderTransfer",
+            "offset": 0,
+            "slot": "106",
+            "type": "t_address",
+            "contract": "KassandraControlledManagedPoolFactory",
+            "src": "contracts/KassandraControlledManagedPoolFactory.sol:57"
+          },
+          {
+            "label": "_WETH",
+            "offset": 0,
+            "slot": "107",
+            "type": "t_contract(IWETH)1592",
+            "contract": "KassandraControlledManagedPoolFactory",
+            "src": "contracts/KassandraControlledManagedPoolFactory.sol:58"
+          },
+          {
+            "label": "_vault",
+            "offset": 0,
+            "slot": "108",
+            "type": "t_contract(IVault)2558",
+            "contract": "KassandraControlledManagedPoolFactory",
+            "src": "contracts/KassandraControlledManagedPoolFactory.sol:60"
+          },
+          {
+            "label": "_privateInvestors",
+            "offset": 0,
+            "slot": "109",
+            "type": "t_contract(IPrivateInvestors)25464",
+            "contract": "KassandraControlledManagedPoolFactory",
+            "src": "contracts/KassandraControlledManagedPoolFactory.sol:61"
+          },
+          {
+            "label": "_authorizedManagers",
+            "offset": 0,
+            "slot": "110",
+            "type": "t_contract(IAuthorizedManagers)25291",
+            "contract": "KassandraControlledManagedPoolFactory",
+            "src": "contracts/KassandraControlledManagedPoolFactory.sol:62"
+          },
+          {
+            "label": "_isPoolFromFactory",
+            "offset": 0,
+            "slot": "111",
+            "type": "t_mapping(t_address,t_bool)",
+            "contract": "KassandraControlledManagedPoolFactory",
+            "src": "contracts/KassandraControlledManagedPoolFactory.sol:64"
+          },
+          {
+            "label": "_kassandraControllerList",
+            "offset": 0,
+            "slot": "112",
+            "type": "t_contract(IKassandraControllerList)25337",
+            "contract": "KassandraControlledManagedPoolFactory",
+            "src": "contracts/KassandraControlledManagedPoolFactory.sol:66"
+          }
+        ],
+        "types": {
+          "t_address": {
+            "label": "address",
+            "numberOfBytes": "20"
+          },
+          "t_array(t_uint256)49_storage": {
+            "label": "uint256[49]",
+            "numberOfBytes": "1568"
+          },
+          "t_array(t_uint256)50_storage": {
+            "label": "uint256[50]",
+            "numberOfBytes": "1600"
+          },
+          "t_bool": {
+            "label": "bool",
+            "numberOfBytes": "1"
+          },
+          "t_contract(IAuthorizedManagers)25291": {
+            "label": "contract IAuthorizedManagers",
+            "numberOfBytes": "20"
+          },
+          "t_contract(IKassandraControllerList)25337": {
+            "label": "contract IKassandraControllerList",
+            "numberOfBytes": "20"
+          },
+          "t_contract(IPrivateInvestors)25464": {
             "label": "contract IPrivateInvestors",
             "numberOfBytes": "20"
           },
