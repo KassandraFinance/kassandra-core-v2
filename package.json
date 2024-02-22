@@ -4,8 +4,7 @@
   "main": "index.js",
   "license": "MIT",
   "scripts": {
-    "test:proxy": "npx hardhat test ./test/ProxyInvest.spec.ts",
-    "test:comm": "npx hardhat test ./test/CommunityStore.spec.ts",
+    "test": "npx hardhat test",
     "compile": "yarn hardhat compile",
     "lint": "yarn lint:solidity",
     "lint:solidity": "solhint 'contracts/**/*.sol'"
@@ -24,7 +23,7 @@
     "@types/mocha": "^9.1.0",
     "@types/node": ">=12.0.0",
     "chai": "^4.2.0",
-    "dotenv": "^16.0.3",
+    "dotenv": "^16.4.5",
     "ethers": "^5.7.2",
     "hardhat": "^2.12.3",
     "hardhat-gas-reporter": "^1.0.8",
