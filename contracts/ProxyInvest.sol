@@ -198,16 +198,14 @@ contract ProxyInvest is OwnableUpgradeable {
             }
         }
 
-        uint256 amountTokenOut = tokenOut.balanceOf(address(this));
-        uint256 amountToKassandra = 0;
+        amountOut = tokenOut.balanceOf(address(this));
 
         if (!IKassandraManagedPoolController(controller).isPrivatePool()) {
-            amountToKassandra = amountTokenOut.mulDown(_withdrawFee);
+            uint256 amountToKassandra = amountOut.mulDown(_withdrawFee);
             tokenOut.safeTransfer(_kassandra, amountToKassandra);
+            amountOut -= amountToKassandra;
             emit CollectedWithdrawFee(poolId, address(tokenOut), amountToKassandra, _withdrawFee);
         }
-
-        amountOut = amountTokenOut - amountToKassandra;
 
         _require(amountOut >= minAmountOut, Errors.EXIT_BELOW_MIN);
         tokenOut.safeTransfer(recipient, amountOut);
