@@ -72,11 +72,21 @@ contract ProxyInvest is OwnableUpgradeable {
         uint256 amount
     );
 
+    event WithdrawFeeChanged(uint256 newWithdrawFee);
+    event CollectedWithdrawFee(
+        bytes32 indexed poolId,
+        address indexed token,
+        uint256 amountCollected,
+        uint256 withdrawFee
+    );
+
     address private _swapProvider;
     IVault private _vault;
     IWETH private _WETH;
     address private _proxyTransfer;
     IKassandraControllerList private _controllerList;
+    address private _kassandra;
+    uint256 private _withdrawFeePercentage;
 
     function initialize(IVault vault, address swapProvider) public initializer {
         __Ownable_init();
@@ -104,6 +114,14 @@ contract ProxyInvest is OwnableUpgradeable {
         return _controllerList;
     }
 
+    function getKassandra() external view returns (address) {
+        return _kassandra;
+    }
+
+    function getWithdrawFee() external view returns (uint256) {
+        return _withdrawFeePercentage;
+    }
+
     function setProxyTransfer(address proxyTransfer) external onlyOwner {
         _proxyTransfer = proxyTransfer;
     }
@@ -122,6 +140,15 @@ contract ProxyInvest is OwnableUpgradeable {
 
     function setKassandraControllerList(IKassandraControllerList controllerList) external onlyOwner {
         _controllerList = controllerList;
+    }
+
+    function setWithdrawFee(uint256 newWithdrawFee) external onlyOwner {
+        emit WithdrawFeeChanged(newWithdrawFee);
+        _withdrawFeePercentage = newWithdrawFee;
+    }
+
+    function setKassandra(address kassandra) external onlyOwner {
+        _kassandra = kassandra;
     }
 
     function exitPoolExactTokenInWithSwap(
@@ -148,28 +175,38 @@ contract ProxyInvest is OwnableUpgradeable {
 
         _vault.exitPool(poolId, address(this), payable(address(this)), request);
 
-        uint256 size = datas.length;
-        bool success;
-        bytes memory response;
-        for (uint i = 0; i < size; i++) {
-            IERC20 tokenIn = IERC20(address(request.assets[i + 1]));
-            if (tokenIn != tokenOut) {
-                if (tokenIn.allowance(address(this), _proxyTransfer) < request.minAmountsOut[i + 1]) {
-                    tokenIn.safeApprove(_proxyTransfer, type(uint256).max);
-                }
-                (success, response) = _swapProvider.call(datas[i]);
-                if (!success) {
-                    assembly {
-                        let ptr := mload(0x40)
-                        let _size := returndatasize()
-                        returndatacopy(ptr, 0, size)
-                        revert(ptr, _size)
+        {
+            bool success;
+            bytes memory response;
+            uint256 size = datas.length;
+            for (uint i = 0; i < size; i++) {
+                IERC20 tokenIn = IERC20(address(request.assets[i + 1]));
+                if (tokenIn != tokenOut) {
+                    if (tokenIn.allowance(address(this), _proxyTransfer) < request.minAmountsOut[i + 1]) {
+                        tokenIn.safeApprove(_proxyTransfer, type(uint256).max);
+                    }
+                    (success, response) = _swapProvider.call(datas[i]);
+                    if (!success) {
+                        assembly {
+                            let ptr := mload(0x40)
+                            let _size := returndatasize()
+                            returndatacopy(ptr, 0, size)
+                            revert(ptr, _size)
+                        }
                     }
                 }
             }
         }
 
         amountOut = tokenOut.balanceOf(address(this));
+
+        if (!IKassandraManagedPoolController(controller).isPrivatePool()) {
+            uint256 amountToKassandra = amountOut.mulDown(_withdrawFeePercentage);
+            tokenOut.safeTransfer(_kassandra, amountToKassandra);
+            amountOut -= amountToKassandra;
+            emit CollectedWithdrawFee(poolId, address(tokenOut), amountToKassandra, _withdrawFeePercentage);
+        }
+
         _require(amountOut >= minAmountOut, Errors.EXIT_BELOW_MIN);
         tokenOut.safeTransfer(recipient, amountOut);
 

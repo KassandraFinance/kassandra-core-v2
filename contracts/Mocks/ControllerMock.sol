@@ -28,6 +28,7 @@ contract ControllerMock is BaseControllerMock {
     address private _member;
     FeesPercentages private _fees;
     IKacyAssetManager kacyAssetManager;
+    bool private _isPrivatePool;
 
     constructor(address owner, address pool) BaseControllerMock(pool) {
         _owner = owner;
@@ -54,8 +55,16 @@ contract ControllerMock is BaseControllerMock {
         _fees.feesToReferral = feeReferral;
     }
 
+    function setIsPrivatePool(bool isPrivatePool) external {
+        _isPrivatePool = isPrivatePool;
+    }
+
     function isAllowedAddress(address member) external view returns (bool) {
         return _member == member;
+    }
+
+    function isPrivatePool() external view returns (bool) {
+        return _isPrivatePool;
     }
 
     function getManager() external view returns (address) {

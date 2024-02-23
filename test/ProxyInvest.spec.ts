@@ -30,7 +30,9 @@ describe('ProxyInvest', () => {
   };
 
   async function deployProxyInvest() {
-    const [owner, account, manager, referrer] = await ethers.getSigners();
+    const [owner, account, manager, referrer, kassandra] = await ethers.getSigners();
+
+    const withdrawFee = ethers.BigNumber.from((0.005e18).toString());
 
     const Vault = await ethers.getContractFactory('VaultMock');
     const vault = await Vault.deploy();
@@ -89,11 +91,12 @@ describe('ProxyInvest', () => {
     const initBalanceDAI = await dai.balanceOf(account.address);
     const initBalanceTokenIn = await tokenIn.balanceOf(account.address);
 
-
-    const ControllerList = await ethers.getContractFactory("KassandraControllerList");
-    const controllerList = await upgrades.deployProxy(ControllerList) as KassandraControllerList;
+    const ControllerList = await ethers.getContractFactory('KassandraControllerList');
+    const controllerList = (await upgrades.deployProxy(ControllerList)) as KassandraControllerList;
     await controllerList.setControllers([controller.address]);
     await proxyInvest.setKassandraControllerList(controllerList.address);
+    await proxyInvest.setKassandra(kassandra.address);
+    await proxyInvest.setWithdrawFee(withdrawFee);
 
     return {
       proxyInvest,
@@ -102,6 +105,7 @@ describe('ProxyInvest', () => {
       manager,
       account,
       referrer,
+      kassandra,
       poolController: controller,
       pool,
       poolId,
@@ -114,6 +118,8 @@ describe('ProxyInvest', () => {
       initBalanceMATIC,
       initBalanceDAI,
       initBalanceTokenIn,
+      withdrawFee,
+      controller,
     };
   }
 
@@ -531,10 +537,71 @@ describe('ProxyInvest', () => {
       expect(await ethers.provider.getBalance(proxyInvest.address)).to.be.equals(ethers.BigNumber.from(0));
     });
 
-    it.skip('should exit pool', async () => {
-      const { proxyInvest, vault, pool, account, tokenIn, poolController, initBalanceTokenIn } = await loadFixture(
-        deployProxyInvest
-      );
+    it('should exit pool and collect withdraw fee', async () => {
+      const { proxyInvest, vault, pool, account, tokenIn, poolController, initBalanceTokenIn, withdrawFee, kassandra } =
+        await loadFixture(deployProxyInvest);
+
+      const swapProvider = new ParaSwap();
+
+      const amounts = [ethers.utils.parseEther('1'), ethers.utils.parseEther('1')];
+      const txs = [];
+      let minAmountOut = ethers.BigNumber.from(0);
+      for (let i = 0; i < settingsParams.tokens.length; i++) {
+        const res = await swapProvider.getAmountsOut({
+          amount: amounts[i].toString(),
+          chainId: '137',
+          destDecimals: '18',
+          destToken: tokenIn.address,
+          srcDecimals: '18',
+          srcToken: settingsParams.tokens[i],
+        });
+        txs.push(res.transactionsDataTx);
+        minAmountOut = minAmountOut.add(res.amountsTokenIn);
+      }
+
+      const datas = await swapProvider.getDatasTx('137', proxyInvest.address, '1', txs);
+
+      await vault.mockPoolAddress(pool.address);
+      await vault.mockPoolTokensAmountOut([0, ...amounts]);
+
+      const exitKind = 1;
+      const bptAmount = ethers.BigNumber.from((1e18).toString());
+      const userData = defaultAbiCoder.encode(['uint256', 'uint256'], [exitKind, bptAmount]);
+      const request = {
+        assets: [pool.address, ...settingsParams.tokens],
+        minAmountsOut: [0, ...amounts],
+        userData,
+        toInternalBalance: false,
+      };
+      await pool.mint(account.address, bptAmount);
+      await (await pool.connect(account).approve(proxyInvest.address, bptAmount)).wait();
+      const amountToKassandra = minAmountOut.mul(withdrawFee).div((1e18).toString());
+      const minAmountWithoutFee = minAmountOut.sub(amountToKassandra);
+
+      await proxyInvest
+        .connect(account)
+        .exitPoolExactTokenInWithSwap(
+          account.address,
+          poolController.address,
+          bptAmount,
+          tokenIn.address,
+          minAmountWithoutFee,
+          request,
+          datas
+        );
+
+      const lastBalance = await tokenIn.balanceOf(account.address);
+      const lastBalanceKassandra = await tokenIn.balanceOf(kassandra.address);
+      expect(lastBalance.sub(initBalanceTokenIn).gt(0)).to.true;
+      expect(lastBalance.sub(initBalanceTokenIn).gte(minAmountWithoutFee)).to.true;
+      expect(lastBalanceKassandra.eq(amountToKassandra)).to.true;
+    });
+
+    it('should exit pool', async () => {
+      const { proxyInvest, vault, pool, account, tokenIn, poolController, initBalanceTokenIn, kassandra, controller } =
+        await loadFixture(deployProxyInvest);
+
+      await controller.setIsPrivatePool(true);
 
       const swapProvider = new ParaSwap();
 
@@ -584,8 +651,10 @@ describe('ProxyInvest', () => {
         );
 
       const lastBalance = await tokenIn.balanceOf(account.address);
+      const lastBalanceKassandra = await tokenIn.balanceOf(kassandra.address);
       expect(lastBalance.sub(initBalanceTokenIn).gt(0)).to.true;
       expect(lastBalance.sub(initBalanceTokenIn).gte(minAmountOut)).to.true;
+      expect(lastBalanceKassandra.eq(0)).to.true;
     });
   });
 });
