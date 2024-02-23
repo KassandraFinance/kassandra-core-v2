@@ -86,7 +86,7 @@ contract ProxyInvest is OwnableUpgradeable {
     address private _proxyTransfer;
     IKassandraControllerList private _controllerList;
     address private _kassandra;
-    uint256 private _withdrawFee;
+    uint256 private _withdrawFeePercentage;
 
     function initialize(IVault vault, address swapProvider) public initializer {
         __Ownable_init();
@@ -119,7 +119,7 @@ contract ProxyInvest is OwnableUpgradeable {
     }
 
     function getWithdrawFee() external view returns (uint256) {
-        return _withdrawFee;
+        return _withdrawFeePercentage;
     }
 
     function setProxyTransfer(address proxyTransfer) external onlyOwner {
@@ -144,7 +144,7 @@ contract ProxyInvest is OwnableUpgradeable {
 
     function setWithdrawFee(uint256 newWithdrawFee) external onlyOwner {
         emit WithdrawFeeChanged(newWithdrawFee);
-        _withdrawFee = newWithdrawFee;
+        _withdrawFeePercentage = newWithdrawFee;
     }
 
     function setKassandra(address kassandra) external onlyOwner {
@@ -201,10 +201,10 @@ contract ProxyInvest is OwnableUpgradeable {
         amountOut = tokenOut.balanceOf(address(this));
 
         if (!IKassandraManagedPoolController(controller).isPrivatePool()) {
-            uint256 amountToKassandra = amountOut.mulDown(_withdrawFee);
+            uint256 amountToKassandra = amountOut.mulDown(_withdrawFeePercentage);
             tokenOut.safeTransfer(_kassandra, amountToKassandra);
             amountOut -= amountToKassandra;
-            emit CollectedWithdrawFee(poolId, address(tokenOut), amountToKassandra, _withdrawFee);
+            emit CollectedWithdrawFee(poolId, address(tokenOut), amountToKassandra, _withdrawFeePercentage);
         }
 
         _require(amountOut >= minAmountOut, Errors.EXIT_BELOW_MIN);
